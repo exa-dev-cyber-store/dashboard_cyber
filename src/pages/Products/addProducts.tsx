@@ -1,5 +1,6 @@
 import { toast, ToastContainer } from "react-toastify";
-import { useFormik } from 'formik';
+import "react-toastify/dist/ReactToastify.css";
+import { useFormik } from "formik";
 import Input from "@/components/input";
 import SelectCategory from "@/components/selectCategory";
 import InputFile from "@/components/inputFile";
@@ -11,134 +12,279 @@ import useFetchCategory from "@/hooks/useFetchCategory";
 import useAddProducts from "@/hooks/useAddProducts";
 import { ProductPost } from "@/types";
 import { Link } from "react-router-dom";
+import { FormSkeleton } from "@/components/ui/Skeleton";
+import {
+  IconArrowLeft,
+  IconDeviceFloppy,
+  IconPhoto,
+} from "@tabler/icons-react";
 
 export default function AddProducts() {
-
-    const notify = () => toast("ups, something went wrong, please try again", {
-        position: "bottom-left",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-    },);
-
-    const { mutate, isPending } = useAddProducts({
-        onError: () => {
-            notify();
-        },
+  const notify = () =>
+    toast.error("Failed to add product. Please verify all fields.", {
+      position: "bottom-right",
+      theme: "dark",
     });
 
-    const [image, setImage] = useState<{ image_thumbnail: string, image_details: string[] }>(
-        { image_thumbnail: '', image_details: [] }
-    )
+  const { mutate, isPending } = useAddProducts({
+    onError: () => {
+      notify();
+    },
+  });
 
-    const { data, isLoading } = useFetchCategory({ onError: () => notify() });
-    const formik = useFormik({
-        initialValues: {
-            image_thumbnail: '', image_details: null as unknown as [], name: '', price: '', category: 'Select Category', description: '',
-        },
-        validationSchema: AddProductsSchema,
-        enableReinitialize: true,
-        onSubmit: async () => {
-            const data: FormData = new FormData();
-            data.append("name", formik.values.name!);
-            data.append("price", formik.values.price as unknown as string);
-            data.append("category", formik.values.category!);
-            data.append("description", formik.values.description!);
-            data.append("image_thumbnail", formik.values.image_thumbnail!);
-            formik.values.image_details!.forEach((image) => {
-                data.append("image_details", image);
-            });
-            mutate(data as unknown as ProductPost);
+  const [image, setImage] = useState<{
+    image_thumbnail: string;
+    image_details: string[];
+  }>({ image_thumbnail: "", image_details: [] });
 
-        }
-    })
+  const { data: categories, isLoading: isCategoryLoading } = useFetchCategory({
+    onError: () => notify(),
+  });
 
-    const handleImageThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const upload = e.target.files ? e.target.files[0] : null;
-        if (upload) {
-            const url = URL.createObjectURL(upload);
-            setImage({ ...image, image_thumbnail: url });
-            formik.setFieldValue(e.target.name, upload);
-        }
-    };
+  const formik = useFormik({
+    initialValues: {
+      image_thumbnail: "",
+      image_details: [] as File[],
+      name: "",
+      price: "",
+      category: "Select Category",
+      description: "",
+    },
+    validationSchema: AddProductsSchema,
+    enableReinitialize: true,
+    onSubmit: async () => {
+      const formData = new FormData();
+      formData.append("name", formik.values.name);
+      formData.append("price", String(formik.values.price));
+      formData.append("category", formik.values.category);
+      formData.append("description", formik.values.description);
+      formData.append("image_thumbnail", formik.values.image_thumbnail);
 
-    const handleCloseImageDetails = (index: number) => {
-        const newImageDetails = image.image_details.filter((_image, idx) => idx !== index);
-        const newFormDataImageDetails = formik.values.image_details.filter((_image, idx) => idx !== index);
-        formik.setFieldValue("image_details", newFormDataImageDetails);
-        setImage({ ...image, image_details: newImageDetails });
-    };
+      (formik.values.image_details || []).forEach((file: File) => {
+        formData.append("image_details", file);
+      });
 
-    const handleImageDetails = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const upload = e.target.files;
-        if (upload && upload.length > 3) {
-            return toast.warning("Max image 3");
-        }
-        if (upload?.length === 0) return;
-        if (upload && image.image_details.length + upload.length > 3) {
-            return toast.warning("Max image 3");
-        }
-        if (upload) {
-            const files: string[] = [];
-            Array.from(upload).forEach((file) => {
-                const img = URL.createObjectURL(file)
-                files.push(img);
-            });
-            setImage({ ...image, image_details: [...image.image_details, ...files] });
-            formik.setFieldValue(e.target.name, [...image.image_details, ...upload]);
-        }
-    };
-    return (
-        <div className="container mx-auto my-8 ">
-            <h1 className="text-3xl font-bold text-center">Add Products</h1>
-            <div>
-                {isLoading ? (
-                    <center className="mt-28"><span className="loading loading-spinner loading-lg"></span></center>
-                ) : (
-                    <form className="flex flex-col items-center" onSubmit={formik.handleSubmit}>
-                        <Input name="name" handleChange={formik.handleChange} label="Name Products" placeholder="Name Products" type="text" value={formik.values.name} />
-                        <div className="w-full max-w-xs text-start">
-                            {formik.errors.name && <div className="text-red-500">{formik.errors.name}</div>}
-                        </div>
-                        <Input name="price" handleChange={formik.handleChange} label="Price" placeholder="Price" type="number" value={formik.values.price} />
-                        <div className="w-full max-w-xs text-start">
-                            {formik.errors.price && <div className="text-red-500">{formik.errors.price}</div>}
-                        </div>
-                        <SelectCategory name="category" handleChange={formik.handleChange} label="Category" options={data!} value={formik.values.category} />
-                        <div className="w-full max-w-xs text-start">
-                            {formik.errors.category && <div className="text-red-500">{formik.errors.category}</div>}
-                        </div>
-                        <TextArea name="description" handleChange={formik.handleChange} label="Description" placeholder="Description" value={formik.values.description!} />
-                        <div className="w-full max-w-xs text-start">
-                            {formik.errors.description && <div className="text-red-500">{formik.errors.description}</div>}
-                        </div>
-                        <InputFile name="image_thumbnail" handleChange={handleImageThumbnail} label="Image Thumbnail" />
-                        <div className="w-full max-w-xs text-start">
-                            {formik.errors.image_thumbnail && <div className="text-red-500">{formik.errors.image_thumbnail}</div>}
-                        </div>
-                        <div className="my-10">
-                            <ImagePreview image={image.image_thumbnail} />
-                        </div>
-                        <InputFile name="image_details" handleChange={handleImageDetails} label="Image Details" multiple={true} />
-                        <div className="w-full max-w-xs text-start">
-                            {formik.errors.image_details && <div className="text-red-500">{formik.errors.image_details}</div>}
-                        </div>
-                        <div className="flex my-10 space-x-4">
-                            {image.image_details.map((image, index) => (
-                                <ImagePreview key={index} index={index} onClose={handleCloseImageDetails} image={image} />
-                            ))}
-                        </div>
-                        <div className="flex space-x-4">
-                            <Link to="/products" className="mb-10 btn btn-info">Cancel</Link>
-                            <button type="submit" disabled={isPending} className="mb-10 btn btn-primary">Submit</button>
-                        </div>
-                    </form>
-                )}
+      mutate(formData as unknown as ProductPost);
+    },
+  });
+
+  const handleImageThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const upload = e.target.files ? e.target.files[0] : null;
+    if (upload) {
+      const url = URL.createObjectURL(upload);
+      setImage((prev) => ({ ...prev, image_thumbnail: url }));
+      formik.setFieldValue("image_thumbnail", upload);
+    }
+  };
+
+  const handleCloseImageDetails = (index: number) => {
+    const newImageDetails = image.image_details.filter((_, idx) => idx !== index);
+    const newFormDataImageDetails = (formik.values.image_details || []).filter(
+      (_, idx) => idx !== index
+    );
+    formik.setFieldValue("image_details", newFormDataImageDetails);
+    setImage((prev) => ({ ...prev, image_details: newImageDetails }));
+  };
+
+  const handleImageDetails = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const upload = e.target.files;
+    if (!upload || upload.length === 0) return;
+
+    if (image.image_details.length + upload.length > 3) {
+      toast.warning("Maximum of 3 detail images allowed.", {
+        position: "bottom-right",
+        theme: "dark",
+      });
+      return;
+    }
+
+    const previewUrls: string[] = [];
+    const filesArray = Array.from(upload);
+
+    filesArray.forEach((file) => {
+      previewUrls.push(URL.createObjectURL(file));
+    });
+
+    setImage((prev) => ({
+      ...prev,
+      image_details: [...prev.image_details, ...previewUrls],
+    }));
+
+    formik.setFieldValue("image_details", [
+      ...(formik.values.image_details || []),
+      ...filesArray,
+    ]);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Back button & Title */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/products"
+            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white border border-white/10 transition-colors"
+            title="Back to Products"
+          >
+            <IconArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Create New Product
+            </h1>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              Add a new Apple product listing to the Cyber catalog.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {isCategoryLoading ? (
+        <FormSkeleton />
+      ) : (
+        <form
+          onSubmit={formik.handleSubmit}
+          className="rounded-3xl bg-[#10131c]/90 border border-neutral-800/90 p-6 sm:p-10 backdrop-blur-xl space-y-6 shadow-2xl"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Input
+              name="name"
+              label="Product Title"
+              placeholder="e.g. iPhone 16 Pro Max 256GB"
+              type="text"
+              value={formik.values.name}
+              handleChange={formik.handleChange}
+              error={formik.touched.name ? formik.errors.name : undefined}
+              required
+            />
+
+            <Input
+              name="price"
+              label="Price (IDR)"
+              placeholder="e.g. 24.999.000"
+              type="text"
+              isCurrency={true}
+              value={formik.values.price}
+              handleChange={formik.handleChange}
+              error={formik.touched.price ? formik.errors.price : undefined}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <SelectCategory
+              name="category"
+              label="Category"
+              options={categories || []}
+              value={formik.values.category}
+              handleChange={formik.handleChange}
+              error={formik.touched.category ? formik.errors.category : undefined}
+              required
+            />
+          </div>
+
+          <TextArea
+            name="description"
+            label="Product Description"
+            placeholder="Provide technical specifications, display size, chip, and packaging details..."
+            value={formik.values.description}
+            handleChange={formik.handleChange}
+            error={formik.touched.description ? formik.errors.description : undefined}
+            required
+          />
+
+          {/* Image Upload Section */}
+          <div className="pt-4 border-t border-neutral-800/80 space-y-6">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <IconPhoto className="w-4 h-4 text-cyan-400" />
+              Media Assets & Visuals
+            </h3>
+
+            {/* Thumbnail Upload */}
+            <div className="space-y-3">
+              <InputFile
+                name="image_thumbnail"
+                label="Primary Thumbnail Image"
+                hint="Main catalog display image (JPEG/PNG/WebP)"
+                handleChange={handleImageThumbnail}
+              />
+              {formik.touched.image_thumbnail && formik.errors.image_thumbnail && (
+                <p className="text-[11px] text-rose-400 font-medium">
+                  {formik.errors.image_thumbnail}
+                </p>
+              )}
+
+              {image.image_thumbnail && (
+                <div className="pt-2">
+                  <ImagePreview
+                    image={image.image_thumbnail}
+                    label="Cover Photo"
+                  />
+                </div>
+              )}
             </div>
-            <ToastContainer />
-        </div >
-    )
+
+            {/* Gallery Images Upload */}
+            <div className="space-y-3">
+              <InputFile
+                name="image_details"
+                label="Product Gallery (Max 3 Images)"
+                hint="High-resolution angles and detail shots (Up to 3 images)"
+                multiple={true}
+                handleChange={handleImageDetails}
+              />
+              {formik.touched.image_details && formik.errors.image_details && (
+                <p className="text-[11px] text-rose-400 font-medium">
+                  {formik.errors.image_details as string}
+                </p>
+              )}
+
+              {image.image_details.length > 0 && (
+                <div className="flex flex-wrap gap-4 pt-2">
+                  {image.image_details.map((imgUrl, index) => (
+                    <ImagePreview
+                      key={index}
+                      index={index}
+                      image={imgUrl}
+                      onClose={handleCloseImageDetails}
+                      label={`Angle ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Form Actions */}
+          <div className="pt-6 border-t border-neutral-800/80 flex items-center justify-end gap-3">
+            <Link
+              to="/products"
+              className="px-5 py-2.5 rounded-xl text-xs font-semibold text-neutral-300 hover:bg-white/5 border border-neutral-800 transition-colors"
+            >
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-lg shadow-cyan-500/25 transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {isPending ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  Publishing Product...
+                </>
+              ) : (
+                <>
+                  <IconDeviceFloppy className="w-4 h-4" />
+                  Publish to Store
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <ToastContainer theme="dark" />
+    </div>
+  );
 }

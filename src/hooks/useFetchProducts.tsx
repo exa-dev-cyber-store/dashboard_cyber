@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export default function useFetchProducts({ onError, currentPage, search }: { onError: () => void, currentPage: number, search: string }) {
     return useQuery<ResponsFetchProducts>({
-        queryKey: ["products", currentPage],
+        queryKey: ["products", currentPage, search],
         queryFn: async () => await getProducts(currentPage, search),
         throwOnError() {
             onError()

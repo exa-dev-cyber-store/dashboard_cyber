@@ -7,7 +7,7 @@ import { useCookies } from "react-cookie";
 import { useNavigate } from "react-router-dom";
 
 export default function useLogin({ onError }: { onError: () => void }) {
-    const [, setCookie] = useCookies(['token']);
+    const [, setCookie] = useCookies(['token', 'admin_name']);
     const nameContext = useContext(NameProvider);
     const { setName } = nameContext!;
     const navigate = useNavigate();
@@ -19,7 +19,13 @@ export default function useLogin({ onError }: { onError: () => void }) {
                 onError();
                 return false;
             }
-            setCookie('token', data.token, { sameSite: 'strict', secure: true });
+            const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
+            setCookie('token', data.token, { path: '/', sameSite: 'lax', secure: isSecure });
+            setCookie('admin_name', data.name, { path: '/', sameSite: 'lax', secure: isSecure });
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('admin_name', data.name);
+            }
             setName(data.name);
             navigate('/');
         },

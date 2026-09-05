@@ -1,7 +1,8 @@
 import useFetchSingleProducts from "@/hooks/useFetchSingleProducts";
 import { Link, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
-import { useFormik } from 'formik';
+import "react-toastify/dist/ReactToastify.css";
+import { useFormik } from "formik";
 import Input from "@/components/input";
 import SelectCategory from "@/components/selectCategory";
 import InputFile from "@/components/inputFile";
@@ -10,151 +11,291 @@ import ImagePreview from "@/components/imagePreview";
 import useEditProducts from "@/hooks/useEditProducts";
 import TextArea from "@/components/textArea";
 import { ProductPost } from "@/types";
+import { FormSkeleton } from "@/components/ui/Skeleton";
+import {
+  IconArrowLeft,
+  IconDeviceFloppy,
+  IconPhoto,
+} from "@tabler/icons-react";
 
 export default function EditProducts() {
-
-    const notify = () => toast("ups, something went wrong, please try again", {
-        position: "bottom-left",
-        autoClose: 2000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-    },);
-
-    const { id } = useParams<{ id: string }>();
-
-    const { data, isLoading, setImageDetails, imageDetails, imageThumbnail, setImageThumbnail } = useFetchSingleProducts({
-        onError: () => {
-            notify();
-        },
-        id: id as string,
-    })
-
-    const { mutate } = useEditProducts({
-        onError: () => {
-            notify();
-        },
-        id: id as string,
+  const notify = () =>
+    toast.error("Failed to update product. Please check your inputs.", {
+      position: "bottom-right",
+      theme: "dark",
     });
 
+  const { id } = useParams<{ id: string }>();
 
-    const [product, category] = data ?? [];
+  const {
+    data,
+    isLoading,
+    setImageDetails,
+    imageDetails,
+    imageThumbnail,
+    setImageThumbnail,
+  } = useFetchSingleProducts({
+    onError: () => {
+      notify();
+    },
+    id: id as string,
+  });
 
+  const { mutate, isPending } = useEditProducts({
+    onError: () => {
+      notify();
+    },
+    id: id as string,
+  });
 
-    const formik = useFormik({
-        initialValues: { image_thumbnail: product?.image_thumbnail, image_details: product?.image_details, name: product?.name, price: product?.price, category: product?.category.name, description: product?.description },
-        validationSchema: EditProductsSchema,
-        enableReinitialize: true,
-        onSubmit: async () => {
-            const data: FormData = new FormData();
-            data.append("name", formik.values.name!);
-            data.append("price", formik.values.price as unknown as string);
-            data.append("category", formik.values.category!);
-            data.append("description", formik.values.description!);
-            data.append("image_thumbnail", formik.values.image_thumbnail!);
-            formik.values.image_details!.forEach((image) => {
-                data.append("image_details", image);
-            });
+  const [product, category] = data ?? [];
 
-            if (formik.values.image_details!.length > 3) {
-                return toast.warning("Max image 3");
-            }
-            if (formik.values.image_details?.length === 0) {
-                return toast.warning("Image Details is required");
-            }
-            mutate(data as unknown as ProductPost);
-        }
-    })
+  const formik = useFormik({
+    initialValues: {
+      image_thumbnail: product?.image_thumbnail || "",
+      image_details: product?.image_details || [],
+      name: product?.name || "",
+      price: product?.price || "",
+      category: product?.category?.name || "Select Category",
+      description: product?.description || "",
+    },
+    validationSchema: EditProductsSchema,
+    enableReinitialize: true,
+    onSubmit: async () => {
+      const formData = new FormData();
+      formData.append("name", formik.values.name);
+      formData.append("price", String(formik.values.price));
+      formData.append("category", formik.values.category);
+      formData.append("description", formik.values.description);
+      formData.append("image_thumbnail", formik.values.image_thumbnail);
 
-    const handleImageThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const upload = e.target.files ? e.target.files[0] : null;
-        if (upload) {
-            const url = URL.createObjectURL(upload);
-            setImageThumbnail(url);
-            formik.setFieldValue(e.target.name, upload);
-        }
-    };
+      (formik.values.image_details || []).forEach((imageItem: any) => {
+        formData.append("image_details", imageItem);
+      });
 
-    const handleCloseImageDetails = (index: number) => {
-        const newImageDetails = imageDetails.filter((_image, idx) => idx !== index);
-        const newFormDataImageDetails = formik.values.image_details!.filter((_image, idx) => idx !== index);
-        formik.setFieldValue("image_details", newFormDataImageDetails);
-        setImageDetails(newImageDetails);
-    };
+      if (formik.values.image_details?.length > 3) {
+        return toast.warning("Maximum of 3 detail images allowed.", {
+          position: "bottom-right",
+          theme: "dark",
+        });
+      }
 
-    const handleImageDetails = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const upload = e.target.files;
-        if (upload && upload.length > 3) {
-            return toast.warning("Max image 3");
-        }
-        if (upload?.length === 0) return;
-        if (upload && imageDetails.length + upload.length > 3) {
-            return toast.warning("Max image 3");
-        }
-        if (upload) {
-            const files: string[] = [];
-            Array.from(upload).forEach((file) => {
-                const img = URL.createObjectURL(file)
-                files.push(img);
-            });
-            setImageDetails([...imageDetails, ...files]);
-            formik.setFieldValue(e.target.name, [...imageDetails, ...upload]);
-        }
-    };
+      mutate(formData as unknown as ProductPost);
+    },
+  });
 
-    return (
-        <div className="container mx-auto my-8 ">
-            <h1 className="text-3xl font-bold text-center">Edit Products</h1>
-            <div>
-                {isLoading ? (
-                    <center className="mt-28"><span className="loading loading-spinner loading-lg"></span></center>
-                ) : (
-                    <>
+  const handleImageThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const upload = e.target.files ? e.target.files[0] : null;
+    if (upload) {
+      const url = URL.createObjectURL(upload);
+      setImageThumbnail(url);
+      formik.setFieldValue("image_thumbnail", upload);
+    }
+  };
 
-                        <form className="flex flex-col items-center" onSubmit={formik.handleSubmit}>
-                            <Input name="name" handleChange={formik.handleChange} label="Name Products" placeholder="Name Products" type="text" value={formik.values.name} />
-                            <div>
-                                {formik.errors.name && <div className="text-red-500">{formik.errors.name}</div>}
-                            </div>
-                            <Input name="price" handleChange={formik.handleChange} label="Price" placeholder="Price" type="number" value={formik.values.price} />
-                            <div className="w-full max-w-xs text-start">
-                                {formik.errors.price && <div className="text-red-500">{formik.errors.price}</div>}
-                            </div>
-                            <SelectCategory name="category" handleChange={formik.handleChange} label="Category" options={category!} value={formik.values.category} />
-                            <div className="w-full max-w-xs text-start">
-                                {formik.errors.category && <div className="text-red-500">{formik.errors.category}</div>}
-                            </div>
-                            <TextArea name="description" handleChange={formik.handleChange} label="Description" placeholder="Description" value={formik.values.description!} />
-                            <div className="w-full max-w-xs text-start">
-                                {formik.errors.description && <div className="text-red-500">{formik.errors.description}</div>}
-                            </div>
-                            <InputFile name="image_thumbnail" handleChange={handleImageThumbnail} label="Image Thumbnail" />
-                            <div className="w-full max-w-xs text-start">
-                                {formik.errors.image_thumbnail && <div className="text-red-500">{formik.errors.image_thumbnail}</div>}
-                            </div>
-                            <div className="my-10">
-                                <ImagePreview image={imageThumbnail} />
-                            </div>
-                            <InputFile name="image_details" handleChange={handleImageDetails} label="Image Details" multiple={true} />
-                            <div className="w-full max-w-xs text-start">
-                                {formik.errors.image_details && <div className="text-red-500">{formik.errors.image_details}</div>}
-                            </div>
-                            <div className="flex my-10 space-x-4">
-                                {imageDetails.map((image, index) => (
-                                    <ImagePreview key={index} index={index} onClose={handleCloseImageDetails} image={image} />
-                                ))}
-                            </div>
-                            <div className="flex space-x-4">
-                                <Link to="/products" className="mb-10 btn btn-info">Cancel</Link>
-                                <button type="submit" className="mb-10 btn btn-primary">Submit</button>
-                            </div>
-                        </form>
-                    </>
-                )}
-            </div>
-            <ToastContainer />
+  const handleCloseImageDetails = (index: number) => {
+    const newImageDetails = imageDetails.filter((_, idx) => idx !== index);
+    const newFormDataImageDetails = (formik.values.image_details || []).filter(
+      (_, idx) => idx !== index
+    );
+    formik.setFieldValue("image_details", newFormDataImageDetails);
+    setImageDetails(newImageDetails);
+  };
+
+  const handleImageDetails = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const upload = e.target.files;
+    if (!upload || upload.length === 0) return;
+
+    if (imageDetails.length + upload.length > 3) {
+      return toast.warning("Maximum of 3 detail images allowed.", {
+        position: "bottom-right",
+        theme: "dark",
+      });
+    }
+
+    const previewUrls: string[] = [];
+    const filesArray = Array.from(upload);
+
+    filesArray.forEach((file) => {
+      previewUrls.push(URL.createObjectURL(file));
+    });
+
+    setImageDetails([...imageDetails, ...previewUrls]);
+    formik.setFieldValue("image_details", [
+      ...(formik.values.image_details || []),
+      ...filesArray,
+    ]);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header & Back */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/products"
+            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-400 hover:text-white border border-white/10 transition-colors"
+            title="Back to Products"
+          >
+            <IconArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Edit Product
+            </h1>
+            <p className="text-xs text-neutral-400 mt-0.5 font-mono">
+              Item ID: {id}
+            </p>
+          </div>
         </div>
-    )
+      </div>
+
+      {isLoading ? (
+        <FormSkeleton />
+      ) : (
+        <form
+          onSubmit={formik.handleSubmit}
+          className="rounded-3xl bg-[#10131c]/90 border border-neutral-800/90 p-6 sm:p-10 backdrop-blur-xl space-y-6 shadow-2xl"
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Input
+              name="name"
+              label="Product Title"
+              placeholder="e.g. MacBook Pro 16 M3 Max"
+              type="text"
+              value={formik.values.name}
+              handleChange={formik.handleChange}
+              error={formik.touched.name ? formik.errors.name : undefined}
+              required
+            />
+
+            <Input
+              name="price"
+              label="Price (IDR)"
+              placeholder="e.g. 24.999.000"
+              type="text"
+              isCurrency={true}
+              value={formik.values.price}
+              handleChange={formik.handleChange}
+              error={formik.touched.price ? formik.errors.price : undefined}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <SelectCategory
+              name="category"
+              label="Category"
+              options={category || []}
+              value={formik.values.category}
+              handleChange={formik.handleChange}
+              error={formik.touched.category ? formik.errors.category : undefined}
+              required
+            />
+          </div>
+
+          <TextArea
+            name="description"
+            label="Product Description"
+            placeholder="Specifications, hardware components, and feature highlights..."
+            value={formik.values.description}
+            handleChange={formik.handleChange}
+            error={formik.touched.description ? formik.errors.description : undefined}
+            required
+          />
+
+          {/* Media Section */}
+          <div className="pt-4 border-t border-neutral-800/80 space-y-6">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <IconPhoto className="w-4 h-4 text-cyan-400" />
+              Manage Imagery & Media
+            </h3>
+
+            {/* Thumbnail */}
+            <div className="space-y-3">
+              <InputFile
+                name="image_thumbnail"
+                label="Primary Thumbnail"
+                hint="Upload to replace existing catalog cover photo"
+                handleChange={handleImageThumbnail}
+              />
+              {formik.touched.image_thumbnail && formik.errors.image_thumbnail && (
+                <p className="text-[11px] text-rose-400 font-medium">
+                  {formik.errors.image_thumbnail}
+                </p>
+              )}
+
+              {imageThumbnail && (
+                <div className="pt-2">
+                  <ImagePreview
+                    image={imageThumbnail}
+                    label="Current Thumbnail"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Gallery */}
+            <div className="space-y-3">
+              <InputFile
+                name="image_details"
+                label="Product Detail Gallery (Max 3 Images)"
+                hint="Upload up to 3 high-resolution images"
+                multiple={true}
+                handleChange={handleImageDetails}
+              />
+              {formik.touched.image_details && formik.errors.image_details && (
+                <p className="text-[11px] text-rose-400 font-medium">
+                  {formik.errors.image_details as string}
+                </p>
+              )}
+
+              {imageDetails && imageDetails.length > 0 && (
+                <div className="flex flex-wrap gap-4 pt-2">
+                  {imageDetails.map((imageItem: string, index: number) => (
+                    <ImagePreview
+                      key={index}
+                      index={index}
+                      image={imageItem}
+                      onClose={handleCloseImageDetails}
+                      label={`Angle ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="pt-6 border-t border-neutral-800/80 flex items-center justify-end gap-3">
+            <Link
+              to="/products"
+              className="px-5 py-2.5 rounded-xl text-xs font-semibold text-neutral-300 hover:bg-white/5 border border-neutral-800 transition-colors"
+            >
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="px-6 py-2.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-lg shadow-cyan-500/25 transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {isPending ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  Saving Changes...
+                </>
+              ) : (
+                <>
+                  <IconDeviceFloppy className="w-4 h-4" />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <ToastContainer theme="dark" />
+    </div>
+  );
 }

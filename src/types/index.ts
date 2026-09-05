@@ -95,9 +95,50 @@ export interface Search extends React.FormEvent<HTMLFormElement> {
     };
 }
 
+export interface DashboardUser {
+    _id: string;
+    name: string;
+    email: string;
+    role: 'admin' | 'user';
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface UserListResponse {
+    total: number;
+    totalAdmins: number;
+    totalRegularUsers: number;
+    users: DashboardUser[];
+}
+
+export interface DashboardVoucher {
+    _id: string;
+    code: string;
+    title: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    minPurchase: number;
+    maxDiscount?: number;
+    isPublic: boolean;
+    isActive: boolean;
+    validUntil: string;
+    usageLimit: number;
+    usedCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface VoucherListResponse {
+    total: number;
+    totalPublic: number;
+    totalPrivate: number;
+    vouchers: DashboardVoucher[];
+}
+
 declare module '@tanstack/react-query' {
     interface Register {
         DefaultError: AxiosError
     }
 }
+
 

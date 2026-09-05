@@ -1,143 +1,380 @@
 import Pagination from "@/components/pagination";
-import SelectDeliveryStatus from "@/components/selectDeliveryStatus";
 import useUpdateOrders from "@/components/useUpdateOrders";
 import useFetchOrders from "@/hooks/useFetchOrders";
 import formatDate from "@/libs/formatDate";
 import { formatRupiah } from "@/libs/formatRupiah";
 import { Order } from "@/types";
-import { IconX } from "@tabler/icons-react";
+import { TableSkeleton } from "@/components/ui/Skeleton";
+import {
+  IconX,
+  IconNotes,
+  IconTruckDelivery,
+  IconCheck,
+  IconClock,
+  IconRotate,
+  IconCreditCard,
+} from "@tabler/icons-react";
 import { useFormik } from "formik";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-const status = ['pending', 'delivered', 'process']
+const deliveryStatuses = [
+  { value: "pending", label: "Pending", desc: "Order packed & awaiting pickup", color: "amber" },
+  { value: "process", label: "In Transit / Process", desc: "Handed over to courier", color: "cyan" },
+  { value: "delivered", label: "Delivered", desc: "Successfully received by customer", color: "emerald" },
+];
 
 export default function Orders() {
-    const notify = () =>
-        toast("ups, something went wrong, please try again", {
-            position: "bottom-left",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-        });
-    const [openModal, setOpenModal] = useState(false);
-    const [onSelect, setOnSelect] = useState<{ id: string, status: string }>({ id: '', status: '' });
-    const modal = useRef<HTMLFormElement>(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const { data, isLoading, refetch } = useFetchOrders({ onError: () => notify(), currentPage });
-    const { mutate } = useUpdateOrders({ onError: () => toast.error('Failed update status delivery😓'), onSuccess: () => toast.success('Success update status delivery😎'), refetch, setOpenModal });
-
-    const formik = useFormik({
-        initialValues: {
-            delivery_status: onSelect.status
-        },
-        enableReinitialize: true,
-        onSubmit: values => {
-            console.log(values.delivery_status, onSelect.status)
-            if (values.delivery_status === onSelect.status) {
-                toast("No changes detected", {
-                    position: "bottom-left",
-                    autoClose: 2000,
-                    hideProgressBar: false,
-                    closeOnClick: true,
-                    pauseOnHover: true,
-                    draggable: true,
-                    progress: undefined,
-                });
-                return;
-            }
-            mutate({ delivery_status: values.delivery_status, id: onSelect.id });
-            setOnSelect({ id: '', status: '' });
-            formik.resetForm();
-        }
+  const notify = () =>
+    toast.error("Failed to load orders. Please check your connection.", {
+      position: "bottom-right",
+      autoClose: 2500,
+      theme: "dark",
     });
 
-    const changePage = (page: number) => {
-        if (page === currentPage) return;
-        setCurrentPage(page);
-        refetch({ cancelRefetch: true });
+  const [openModal, setOpenModal] = useState(false);
+  const [onSelect, setOnSelect] = useState<{ id: string; status: string }>({
+    id: "",
+    status: "",
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data, isLoading, refetch } = useFetchOrders({
+    onError: () => notify(),
+    currentPage,
+  });
+
+  const { mutate, isPending: isUpdating } = useUpdateOrders({
+    onError: () =>
+      toast.error("Failed to update delivery status.", {
+        position: "bottom-right",
+        theme: "dark",
+      }),
+    onSuccess: () => {
+      toast.success("Delivery status updated successfully.", {
+        position: "bottom-right",
+        theme: "dark",
+      });
+      setOpenModal(false);
+      refetch();
+    },
+    refetch,
+    setOpenModal,
+  });
+
+  const formik = useFormik({
+    initialValues: {
+      delivery_status: onSelect.status,
+    },
+    enableReinitialize: true,
+    onSubmit: (values) => {
+      if (values.delivery_status === onSelect.status) {
+        toast.info("No changes detected in delivery status.", {
+          position: "bottom-right",
+          theme: "dark",
+        });
+        return;
+      }
+      mutate({ delivery_status: values.delivery_status, id: onSelect.id });
+    },
+  });
+
+  const changePage = (page: number) => {
+    if (page === currentPage) return;
+    setCurrentPage(page);
+    refetch();
+  };
+
+  const getPaymentBadge = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold">
+            <IconCheck className="w-3 h-3" /> Paid
+          </span>
+        );
+      case "pending":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[11px] font-semibold">
+            <IconClock className="w-3 h-3" /> Unpaid
+          </span>
+        );
+      case "expire":
+      case "expired":
+      case "cancel":
+      case "cancelled":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[11px] font-semibold">
+            <IconX className="w-3 h-3" /> Expired
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-neutral-800 text-neutral-300 text-[11px] font-medium">
+            {status || "N/A"}
+          </span>
+        );
     }
+  };
 
-    const handleOpenModal = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-        if (modal.current && modal.current.contains(e.target as Node)) {
-            return
-        }
-        setOpenModal(!openModal);
-    };
+  const getDeliveryBadge = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "delivered":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold">
+            <IconCheck className="w-3 h-3" /> Delivered
+          </span>
+        );
+      case "process":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 text-[11px] font-semibold">
+            <IconRotate className="w-3 h-3 animate-spin" /> In Transit
+          </span>
+        );
+      case "pending":
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[11px] font-semibold">
+            <IconClock className="w-3 h-3" /> Pending Dispatch
+          </span>
+        );
+    }
+  };
 
-    return (
-        <>
-            {openModal &&
-                <div onClick={handleOpenModal} className="fixed bg-opacity-60 z-[1000] flex items-center w-screen h-screen text-center bg-black">
-                    <form ref={modal} onSubmit={formik.handleSubmit} className="relative flex flex-col items-center w-1/2 p-10 mx-auto space-y-6 bg-white rounded-2xl" action="">
-                        <IconX onClick={() => setOpenModal(!openModal)} className="absolute m-auto text-black top-2 right-2" />
-                        <h1 className="text-2xl font-bold text-center text-black">Update Status delivery</h1>
-                        <SelectDeliveryStatus label="Delivery status" name="delivery_status" options={status} handleChange={formik.handleChange} value={formik.values.delivery_status} />
-                        <button type="submit" className="btn btn-primary">Update</button>
-                    </form>
-                </div>
-            }
-            <div className="w-full overflow-x-auto">
-                <h1 className="text-2xl font-bold text-center text-black">Orders</h1>
-                <table className="table table-zebra">
-                    <thead>
-                        <tr className="font-bold text-black">
-                            <th>No</th>
-                            <th>Id</th>
-                            <th>Status Delivery</th>
-                            <th>Status Payment</th>
-                            <th>Payment Method</th>
-                            <th>Total</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    {isLoading ? null : (
-                        <tbody>
-                            {data?.orders.map((order: Order, index: number) => (
-                                <tr key={order._id}>
-                                    <td>{((currentPage - 1) * 12) + index + 1}</td>
-                                    <td>{order._id}</td>
-                                    <td>{order.status_delivery}</td>
-                                    <td>{order.status_payment}</td>
-                                    <td>{order.payment_method}</td>
-                                    <td>{formatRupiah(order.total)}</td>
-                                    <td>{formatDate(order.updatedAt)}</td>
-                                    <td>
-                                        {
-                                            order.status_payment === 'completed' &&
-                                            order.status_delivery !== 'cancelled' && order.status_delivery !== 'delivered' &&
-                                            <div className="flex flex-row space-x-8 fle">
-                                                <button
-                                                    onClick={() => {
-                                                        setOpenModal(true)
-                                                        setOnSelect({ id: order._id, status: order.status_delivery })
-                                                    }}
-                                                    className="btn btn-info"
-                                                >
-                                                    Update
-                                                </button>
-                                            </div>
-                                        }
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    )}
-                </table>
-                {isLoading ? <center>
-                    <div className="text-center">
-                        <span className="loading loading-spinner loading-lg"></span>
-                    </div>
-                </center> :
-                    <div className="flex justify-center m-4">
-                        <Pagination total={data!.page} currentPage={currentPage} setCurrentPage={changePage} />
-                    </div>
-                }
-                <ToastContainer />
+  return (
+    <div className="space-y-6">
+      {/* Update Delivery Status Modal */}
+      {openModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-md rounded-3xl bg-[#11141e] border border-neutral-800 p-6 sm:p-8 shadow-2xl space-y-6">
+            <button
+              onClick={() => setOpenModal(false)}
+              className="absolute top-5 right-5 text-neutral-400 hover:text-white transition-colors"
+            >
+              <IconX className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
+                <IconTruckDelivery className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  Update Delivery Status
+                </h3>
+                <p className="text-xs text-neutral-400">
+                  Order ID: <span className="font-mono text-cyan-400">{onSelect.id}</span>
+                </p>
+              </div>
             </div>
-        </>
-    )
-};
+
+            <form onSubmit={formik.handleSubmit} className="space-y-4">
+              <div className="space-y-2.5">
+                {deliveryStatuses.map((opt) => {
+                  const isSelected = formik.values.delivery_status === opt.value;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                        isSelected
+                          ? "bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_15px_-3px_rgba(6,182,212,0.2)]"
+                          : "bg-neutral-900/60 border-neutral-800/80 hover:bg-neutral-800/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="delivery_status"
+                          value={opt.value}
+                          checked={isSelected}
+                          onChange={formik.handleChange}
+                          className="w-4 h-4 text-cyan-500 bg-neutral-900 border-neutral-700 focus:ring-cyan-500"
+                        />
+                        <div>
+                          <p className={`text-xs font-semibold ${isSelected ? "text-cyan-300" : "text-white"}`}>
+                            {opt.label}
+                          </p>
+                          <p className="text-[10px] text-neutral-400">{opt.desc}</p>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setOpenModal(false)}
+                  disabled={isUpdating}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold text-neutral-300 hover:bg-white/5 border border-neutral-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-lg shadow-cyan-500/25 transition-all flex items-center gap-2"
+                >
+                  {isUpdating ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Save Status"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Header Summary */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-[#10131c]/90 border border-neutral-800/90 backdrop-blur-xl">
+        <div>
+          <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <IconNotes className="w-5 h-5 text-cyan-400" />
+            Order Fulfillment Ledger
+          </h2>
+          <p className="text-xs text-neutral-400 mt-0.5">
+            Monitor real-time payments, shipping dispatch, and customer orders.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-neutral-200 hover:bg-white/10 transition-colors"
+          >
+            <IconRotate className="w-3.5 h-3.5 text-cyan-400" />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Orders Table */}
+      {isLoading ? (
+        <TableSkeleton cols={7} rows={6} />
+      ) : !data || data.orders.length === 0 ? (
+        <div className="text-center py-20 rounded-2xl bg-[#10131c]/90 border border-neutral-800/80 p-8">
+          <div className="w-14 h-14 rounded-2xl bg-neutral-800/60 border border-neutral-700/60 flex items-center justify-center mx-auto mb-3 text-neutral-400">
+            <IconNotes className="w-7 h-7" />
+          </div>
+          <h3 className="text-base font-semibold text-white">
+            No Orders Recorded
+          </h3>
+          <p className="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
+            Transactions will appear here automatically once customers checkout from the store.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-[#10131c]/90 border border-neutral-800/90 overflow-hidden backdrop-blur-xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-neutral-800/80 bg-neutral-900/60 text-[11px] font-bold uppercase tracking-wider text-neutral-400">
+                  <th className="py-3.5 px-4 w-12 text-center">#</th>
+                  <th className="py-3.5 px-4">Order ID & Date</th>
+                  <th className="py-3.5 px-4">Payment</th>
+                  <th className="py-3.5 px-4">Delivery</th>
+                  <th className="py-3.5 px-4">Channel</th>
+                  <th className="py-3.5 px-4">Amount</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-800/50 text-xs">
+                {data.orders.map((order: Order, index: number) => (
+                  <tr
+                    key={order._id}
+                    className="hover:bg-white/[0.02] transition-colors group"
+                  >
+                    <td className="py-4 px-4 text-center text-neutral-400 font-mono text-[11px]">
+                      {(currentPage - 1) * 12 + index + 1}
+                    </td>
+
+                    <td className="py-4 px-4">
+                      <p className="font-mono text-xs font-semibold text-neutral-100 group-hover:text-cyan-300 transition-colors">
+                        {order._id}
+                      </p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                        {formatDate(order.updatedAt || order.createdAt)}
+                      </p>
+                    </td>
+
+                    <td className="py-4 px-4">
+                      {getPaymentBadge(order.status_payment)}
+                    </td>
+
+                    <td className="py-4 px-4">
+                      {getDeliveryBadge(order.status_delivery)}
+                    </td>
+
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-1.5 text-neutral-300 font-medium">
+                        <IconCreditCard className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                        <span className="uppercase text-[11px]">
+                          {order.payment_method || "Midtrans"}
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className="py-4 px-4 font-mono font-bold text-white">
+                      {formatRupiah(order.total)}
+                    </td>
+
+                    <td className="py-4 px-4 text-right">
+                      {order.status_payment === "completed" &&
+                      order.status_delivery !== "delivered" &&
+                      order.status_delivery !== "cancelled" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOnSelect({
+                              id: order._id,
+                              status: order.status_delivery,
+                            });
+                            setOpenModal(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition-all shadow-sm"
+                        >
+                          <IconTruckDelivery className="w-3.5 h-3.5" />
+                          Update
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-neutral-400 italic">
+                          Locked
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Footer */}
+          <div className="p-4 border-t border-neutral-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xs text-neutral-400">
+              Showing page{" "}
+              <strong className="text-white">{currentPage}</strong> of{" "}
+              <strong className="text-white">{data.page}</strong> &bull; Total{" "}
+              <strong className="text-white">{data.count}</strong> orders
+            </span>
+
+            <Pagination
+              total={data.page}
+              currentPage={currentPage}
+              setCurrentPage={changePage}
+            />
+          </div>
+        </div>
+      )}
+
+      <ToastContainer theme="dark" />
+    </div>
+  );
+}

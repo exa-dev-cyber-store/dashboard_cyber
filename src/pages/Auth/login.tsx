@@ -4,80 +4,152 @@ import { useFormik } from "formik";
 import { useEffect } from "react";
 import { useCookies } from "react-cookie";
 import { toast, ToastContainer } from "react-toastify";
-
+import "react-toastify/dist/ReactToastify.css";
+import {
+  IconMail,
+  IconLock,
+  IconShieldCheck,
+  IconArrowRight,
+  IconExternalLink,
+} from "@tabler/icons-react";
 
 export default function Login() {
-
-    const { mutate } = useLogin({
-        onError: () => {
-            notify();
-        }
-
+  const notify = () =>
+    toast.error("Invalid credentials or unauthorized account.", {
+      position: "bottom-right",
+      autoClose: 3000,
+      theme: "dark",
     });
 
-    const formik = useFormik({
-        initialValues: {
-            email: "",
-            password: ""
-        },
-        onSubmit: async (values) => {
-            mutate(values);
-        }
-    })
+  const { mutate, isPending } = useLogin({
+    onError: () => {
+      notify();
+    },
+  });
 
-    const [cookies, , removeCookie] = useCookies(['token']);
+  const formik = useFormik({
+    initialValues: {
+      email: "",
+      password: "",
+    },
+    onSubmit: async (values) => {
+      mutate(values);
+    },
+  });
 
-    useEffect(() => {
-        if (cookies.token) {
-            removeCookie('token');
-        }
-    }, []);
+  const [cookies, , removeCookie] = useCookies(["token", "admin_name"]);
 
-    const notify = () =>
-        toast("ups, Password or email is wrong", {
-            position: "bottom-left",
-            autoClose: 2000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-        });
+  useEffect(() => {
+    if (cookies.token) {
+      removeCookie("token", { path: "/" });
+      removeCookie("admin_name", { path: "/" });
+    }
+  }, []);
 
-    return (
-        <section className="bg-white dark:bg-gray-900">
-            <div className="container flex items-center justify-center min-h-screen px-6 mx-auto">
-                <form className="w-full max-w-md" onSubmit={formik.handleSubmit}>
-                    <img className="w-auto h-7 sm:h-8" src={icon} alt="" />
-                    <h1 className="mt-3 text-2xl font-semibold text-gray-800 capitalize sm:text-3xl dark:text-white">sign In</h1>
-                    <div className="relative flex items-center mt-8">
-                        <span className="absolute">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 mx-3 text-gray-300 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" >
-                                <path stroke-linecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                        </span>
+  return (
+    <div className="relative min-h-screen w-full flex items-center justify-center p-6 bg-[#07090e] overflow-hidden">
+      {/* Ambient background glows */}
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
 
-                        <input type="email" onChange={formik.handleChange} name="email" className="block w-full py-3 text-gray-700 bg-white border rounded-lg px-11 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-blue-300 focus:outline-none focus:ring focus:ring-opacity-40" placeholder="Email address" />
-                    </div >
-
-                    <div className="relative flex items-center mt-4">
-                        <span className="absolute">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 mx-3 text-gray-300 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path stroke-linecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                        </span>
-
-                        <input type="password" onChange={formik.handleChange} name="password" className="block w-full px-10 py-3 text-gray-700 bg-white border rounded-lg dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600 focus:border-blue-400 dark:focus:border-blue-300 focus:ring-blue-300 focus:outline-none focus:ring focus:ring-opacity-40" placeholder="Password" />
-                    </div>
-
-                    <div className="mt-6">
-                        <button type="submit" className="w-full px-6 py-3 text-sm font-medium tracking-wide text-white capitalize transition-colors duration-300 transform bg-blue-500 rounded-lg hover:bg-blue-400 focus:outline-none focus:ring focus:ring-blue-300 focus:ring-opacity-50">
-                            Sign in
-                        </button>
-                    </div>
-                </form>
+      <div className="relative w-full max-w-md rounded-3xl bg-[#0f121b]/90 border border-neutral-800/90 p-8 sm:p-10 shadow-2xl backdrop-blur-2xl animate-fadeIn">
+        <div className="flex flex-col items-center text-center space-y-3 mb-8">
+          <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-400 via-blue-500 to-indigo-600 p-[1.5px] shadow-[0_0_25px_rgba(6,182,212,0.5)] flex items-center justify-center mb-1">
+            <div className="w-full h-full bg-[#07090e] rounded-[15px] flex items-center justify-center p-2">
+              <img
+                src={icon}
+                alt="Cyber Apple Logo"
+                className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(6,182,212,0.9)]"
+              />
             </div>
-            <ToastContainer />
-        </section>
-    )
+          </div>
+
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center justify-center gap-2">
+              CYBER APPLE
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                PRO
+              </span>
+            </h1>
+            <p className="text-xs text-neutral-400 mt-1">
+              Store Administrator & Fulfillment Portal
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={formik.handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-neutral-300">
+              Admin Email
+            </label>
+            <div className="relative flex items-center">
+              <IconMail className="absolute left-3.5 w-4 h-4 text-neutral-500" />
+              <input
+                type="email"
+                name="email"
+                value={formik.values.email}
+                onChange={formik.handleChange}
+                placeholder="admin@cyber.store"
+                required
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-neutral-900/90 border border-neutral-800 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold text-neutral-300">
+              Secure Password
+            </label>
+            <div className="relative flex items-center">
+              <IconLock className="absolute left-3.5 w-4 h-4 text-neutral-500" />
+              <input
+                type="password"
+                name="password"
+                value={formik.values.password}
+                onChange={formik.handleChange}
+                placeholder="••••••••••••"
+                required
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-neutral-900/90 border border-neutral-800 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={isPending}
+              className="w-full py-3 px-4 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 shadow-lg shadow-cyan-500/25 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+            >
+              {isPending ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  Authenticating...
+                </>
+              ) : (
+                <>
+                  <IconShieldCheck className="w-4 h-4" />
+                  Access Dashboard
+                  <IconArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-8 pt-6 border-t border-neutral-800/80 text-center">
+          <a
+            href="http://localhost:3001"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-cyan-300 transition-colors"
+          >
+            Visit Customer Storefront
+            <IconExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
+
+      <ToastContainer theme="dark" />
+    </div>
+  );
 }
