@@ -1,7 +1,7 @@
 FROM node:22-alpine AS build
 
-ARG VITE_BASE_URL=https://be-apple-store.eka-dev.cloud
-ARG VITE_STOREFRONT_URL=https://apple-store.eka-dev.cloud
+ARG VITE_BASE_URL
+ARG VITE_STOREFRONT_URL
 
 WORKDIR /app
 
