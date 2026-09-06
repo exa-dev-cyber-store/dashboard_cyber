@@ -1,0 +1,32 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  deploy:
+    uses: exa31/github-workflows/.github/workflows/frontend.yml@v1.0.0
+    with:
+      app_name: dashboard-apple-store
+      namespace: appel-store
+      image_name: ghcr.io/exa31/dashboard_cyber
+      node_version: "22"
+      ssh_port: 31080
+      rollout_timeout: 300s
+      build_args: |
+        VITE_BASE_URL=${{ vars.VITE_BASE_URL }}
+        VITE_STOREFRONT_URL=${{ vars.VITE_STOREFRONT_URL }}
+      push_latest: true
+    secrets:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
