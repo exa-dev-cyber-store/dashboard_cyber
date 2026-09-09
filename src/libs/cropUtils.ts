@@ -16,8 +16,9 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
 
 /**
  * Crops an image based on pixelCrop and converts/compresses to WebP format
+ * Accurately projects coordinates so zooming out / fitting full image works seamlessly without clipping
  * @param imageSrc Object URL or base64 of original image
- * @param pixelCrop Cropped coordinates in pixels
+ * @param pixelCrop Cropped coordinates in pixels (can be negative/out-of-bounds when zoomed out)
  * @param outputFilename Name of original file to keep name base
  * @param maxWidth Target maximum width (default 1000px)
  * @param maxHeight Target maximum height (default 1000px)
@@ -40,8 +41,8 @@ export async function getCroppedImg(
   }
 
   // Calculate target dimensions respecting max bounds
-  let targetWidth = pixelCrop.width;
-  let targetHeight = pixelCrop.height;
+  let targetWidth = Math.round(pixelCrop.width);
+  let targetHeight = Math.round(pixelCrop.height);
 
   if (targetWidth > maxWidth || targetHeight > maxHeight) {
     const ratio = Math.min(maxWidth / targetWidth, maxHeight / targetHeight);
@@ -49,24 +50,31 @@ export async function getCroppedImg(
     targetHeight = Math.round(targetHeight * ratio);
   }
 
+  // Ensure positive canvas dimensions
+  targetWidth = Math.max(1, targetWidth);
+  targetHeight = Math.max(1, targetHeight);
+
   canvas.width = targetWidth;
   canvas.height = targetHeight;
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  // Draw crop
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    targetWidth,
-    targetHeight
-  );
+  // Clear canvas (keeps transparent background for WebP / PNG)
+  ctx.clearRect(0, 0, targetWidth, targetHeight);
+
+  // Calculate scale and destination offset on the target canvas
+  // This supports zoom-out where pixelCrop.x < 0 or pixelCrop.y < 0
+  const scaleX = targetWidth / pixelCrop.width;
+  const scaleY = targetHeight / pixelCrop.height;
+
+  const dx = -pixelCrop.x * scaleX;
+  const dy = -pixelCrop.y * scaleY;
+  const dWidth = image.naturalWidth * scaleX;
+  const dHeight = image.naturalHeight * scaleY;
+
+  // Draw full image projected into the canvas area
+  ctx.drawImage(image, dx, dy, dWidth, dHeight);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
@@ -88,3 +96,4 @@ export async function getCroppedImg(
     );
   });
 }
+

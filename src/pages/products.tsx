@@ -222,12 +222,12 @@ export default function Products() {
 
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-11 h-11 rounded-xl bg-neutral-800/80 border border-neutral-700/80 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                          <div className="w-11 h-11 aspect-square rounded-xl bg-neutral-800/80 border border-neutral-700/80 overflow-hidden flex-shrink-0 flex items-center justify-center p-0.5">
                             {product.image_thumbnail ? (
                               <img
                                 src={imageSrc}
                                 alt={product.name}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain"
                                 onError={(e) => {
                                   (e.target as HTMLElement).style.display = "none";
                                 }}

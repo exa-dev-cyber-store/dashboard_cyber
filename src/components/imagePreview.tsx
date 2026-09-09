@@ -21,11 +21,11 @@ export default function ImagePreview({
     : `${backendUrl}/images${image.startsWith("/") ? "" : "/"}${image}`;
 
   return (
-    <div className="relative group rounded-2xl bg-neutral-900/80 border border-neutral-800 p-2 overflow-hidden shadow-lg flex items-center justify-center w-36 h-36">
+    <div className="relative group rounded-2xl bg-neutral-900/80 border border-neutral-800 p-2 overflow-hidden shadow-lg flex items-center justify-center w-36 h-36 aspect-square">
       <img
         src={src}
         alt="Product preview"
-        className="w-full h-full object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
+        className="w-full h-full object-contain rounded-xl transition-transform duration-300 group-hover:scale-105"
         onError={(e) => {
           (e.target as HTMLElement).style.opacity = "0.3";
         }}

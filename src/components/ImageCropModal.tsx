@@ -87,6 +87,9 @@ export default function ImageCropModal({
             image={imageSrc}
             crop={crop}
             zoom={zoom}
+            minZoom={0.2}
+            maxZoom={3}
+            restrictPosition={false}
             aspect={aspectRatio}
             onCropChange={setCrop}
             onZoomChange={setZoom}
@@ -98,36 +101,64 @@ export default function ImageCropModal({
 
         {/* Controls & Footer */}
         <div className="px-6 py-4 space-y-4 bg-neutral-900 border-t border-neutral-800">
-          {/* Zoom Slider */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setZoom((prev) => Math.max(1, prev - 0.2))}
-              className="text-neutral-400 hover:text-white p-1"
-              title="Zoom out"
-            >
-              <IconZoomOut className="w-4 h-4" />
-            </button>
-            <input
-              type="range"
-              min={1}
-              max={3}
-              step={0.05}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-            />
-            <button
-              type="button"
-              onClick={() => setZoom((prev) => Math.min(3, prev + 0.2))}
-              className="text-neutral-400 hover:text-white p-1"
-              title="Zoom in"
-            >
-              <IconZoomIn className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-mono text-neutral-400 w-12 text-right">
-              {Math.round(zoom * 100)}%
-            </span>
+          {/* Quick Fit / Mode Presets & Zoom Slider */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setCrop({ x: 0, y: 0 });
+                  setZoom(0.8);
+                }}
+                className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-neutral-800 hover:bg-neutral-700 text-cyan-300 border border-neutral-700/80 transition-colors"
+                title="Fit whole image inside the 1:1 square canvas without cropping"
+              >
+                Fit Full Image
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setCrop({ x: 0, y: 0 });
+                  setZoom(1);
+                }}
+                className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700/80 transition-colors"
+                title="Fill 1:1 square (Standard 100%)"
+              >
+                Fill (100%)
+              </button>
+            </div>
+
+            {/* Zoom Slider */}
+            <div className="flex items-center gap-3 flex-1 sm:max-w-xs">
+              <button
+                type="button"
+                onClick={() => setZoom((prev) => Math.max(0.2, Number((prev - 0.1).toFixed(2))))}
+                className="text-neutral-400 hover:text-white p-1"
+                title="Zoom out"
+              >
+                <IconZoomOut className="w-4 h-4" />
+              </button>
+              <input
+                type="range"
+                min={0.2}
+                max={3}
+                step={0.02}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+              />
+              <button
+                type="button"
+                onClick={() => setZoom((prev) => Math.min(3, Number((prev + 0.1).toFixed(2))))}
+                className="text-neutral-400 hover:text-white p-1"
+                title="Zoom in"
+              >
+                <IconZoomIn className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-mono text-neutral-400 w-12 text-right">
+                {Math.round(zoom * 100)}%
+              </span>
+            </div>
           </div>
 
           {/* Action Buttons */}
