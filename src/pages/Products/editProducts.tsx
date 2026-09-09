@@ -17,6 +17,8 @@ import {
   IconDeviceFloppy,
   IconPhoto,
 } from "@tabler/icons-react";
+import { useState } from "react";
+import ImageCropModal from "@/components/ImageCropModal";
 
 export default function EditProducts() {
   const notify = () =>
@@ -84,13 +86,33 @@ export default function EditProducts() {
     },
   });
 
+  const [cropModal, setCropModal] = useState<{
+    isOpen: boolean;
+    imageSrc: string;
+    fileName: string;
+    target: "thumbnail" | "details";
+    queue: File[];
+  }>({
+    isOpen: false,
+    imageSrc: "",
+    fileName: "",
+    target: "thumbnail",
+    queue: [],
+  });
+
   const handleImageThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
     const upload = e.target.files ? e.target.files[0] : null;
     if (upload) {
       const url = URL.createObjectURL(upload);
-      setImageThumbnail(url);
-      formik.setFieldValue("image_thumbnail", upload);
+      setCropModal({
+        isOpen: true,
+        imageSrc: url,
+        fileName: upload.name,
+        target: "thumbnail",
+        queue: [],
+      });
     }
+    e.target.value = "";
   };
 
   const handleCloseImageDetails = (index: number) => {
@@ -113,18 +135,50 @@ export default function EditProducts() {
       });
     }
 
-    const previewUrls: string[] = [];
     const filesArray = Array.from(upload);
+    const firstFile = filesArray[0];
+    const remainingQueue = filesArray.slice(1);
 
-    filesArray.forEach((file) => {
-      previewUrls.push(URL.createObjectURL(file));
+    setCropModal({
+      isOpen: true,
+      imageSrc: URL.createObjectURL(firstFile),
+      fileName: firstFile.name,
+      target: "details",
+      queue: remainingQueue,
     });
+    e.target.value = "";
+  };
 
-    setImageDetails([...imageDetails, ...previewUrls]);
-    formik.setFieldValue("image_details", [
-      ...(formik.values.image_details || []),
-      ...filesArray,
-    ]);
+  const handleCropSave = (file: File, previewUrl: string) => {
+    if (cropModal.target === "thumbnail") {
+      setImageThumbnail(previewUrl);
+      formik.setFieldValue("image_thumbnail", file);
+      setCropModal((prev) => ({ ...prev, isOpen: false, imageSrc: "" }));
+    } else {
+      setImageDetails([...imageDetails, previewUrl]);
+      formik.setFieldValue("image_details", [
+        ...(formik.values.image_details || []),
+        file,
+      ]);
+
+      if (cropModal.queue && cropModal.queue.length > 0) {
+        const nextFile = cropModal.queue[0];
+        const remaining = cropModal.queue.slice(1);
+        setCropModal({
+          isOpen: true,
+          imageSrc: URL.createObjectURL(nextFile),
+          fileName: nextFile.name,
+          target: "details",
+          queue: remaining,
+        });
+      } else {
+        setCropModal((prev) => ({ ...prev, isOpen: false, imageSrc: "", queue: [] }));
+      }
+    }
+  };
+
+  const handleCropCancel = () => {
+    setCropModal((prev) => ({ ...prev, isOpen: false, imageSrc: "", queue: [] }));
   };
 
   return (
@@ -294,6 +348,24 @@ export default function EditProducts() {
           </div>
         </form>
       )}
+
+      <ImageCropModal
+        isOpen={cropModal.isOpen}
+        imageSrc={cropModal.imageSrc}
+        fileName={cropModal.fileName}
+        title={
+          cropModal.target === "thumbnail"
+            ? "Crop Product Thumbnail (1:1 Square)"
+            : `Crop Detail Image (1:1 Square)${
+                cropModal.queue.length > 0
+                  ? ` • ${cropModal.queue.length} more in queue`
+                  : ""
+              }`
+        }
+        aspectRatio={1 / 1}
+        onCropSave={handleCropSave}
+        onCancel={handleCropCancel}
+      />
 
       <ToastContainer theme="dark" />
     </div>
