@@ -13,7 +13,8 @@ import {
   IconAlertCircle,
   IconRefresh,
 } from "@tabler/icons-react";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { axiosInstanceData } from "@/libs/axios";
 import { formatRupiah } from "@/libs/formatRupiah";
 
@@ -682,6 +683,7 @@ export default function NotificationsPage() {
           )}
         </div>
       )}
+      <ToastContainer position="top-right" theme="dark" autoClose={3000} />
     </div>
   );
 }
