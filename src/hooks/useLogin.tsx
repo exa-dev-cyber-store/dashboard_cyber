@@ -7,23 +7,32 @@ import { useCookies } from "react-cookie";
 import { useNavigate } from "react-router-dom";
 
 export default function useLogin({ onError }: { onError: () => void }) {
-    const [, setCookie] = useCookies(['token', 'admin_name']);
+    const [, setCookie] = useCookies(['token', 'refreshToken', 'admin_name']);
     const nameContext = useContext(NameProvider);
     const { setName } = nameContext!;
     const navigate = useNavigate();
     return useMutation({
         mutationFn: async (data: LoginPost) => await login(data),
-        onSuccess: (data) => {
-            console.log(data)
+        onSuccess: (data: any) => {
             if (data.role !== 'admin') {
                 onError();
                 return false;
             }
             const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
-            setCookie('token', data.token, { path: '/', sameSite: 'lax', secure: isSecure });
+            const accessToken = data.accessToken || data.token;
+            const refreshToken = data.refreshToken;
+
+            setCookie('token', accessToken, { path: '/', sameSite: 'lax', secure: isSecure });
+            if (refreshToken) {
+                setCookie('refreshToken', refreshToken, { path: '/', sameSite: 'lax', secure: isSecure });
+            }
             setCookie('admin_name', data.name, { path: '/', sameSite: 'lax', secure: isSecure });
+
             if (typeof localStorage !== 'undefined') {
-                localStorage.setItem('token', data.token);
+                localStorage.setItem('token', accessToken);
+                if (refreshToken) {
+                    localStorage.setItem('refreshToken', refreshToken);
+                }
                 localStorage.setItem('admin_name', data.name);
             }
             setName(data.name);

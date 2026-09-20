@@ -5,6 +5,7 @@ import formatDate from "@/libs/formatDate";
 import { formatRupiah } from "@/libs/formatRupiah";
 import { Order } from "@/types";
 import { TableSkeleton } from "@/components/ui/Skeleton";
+import OrderDetailModal from "@/components/OrderDetailModal";
 import {
   IconX,
   IconNotes,
@@ -13,6 +14,8 @@ import {
   IconClock,
   IconRotate,
   IconCreditCard,
+  IconBell,
+  IconEye,
 } from "@tabler/icons-react";
 import { useFormik } from "formik";
 import { useState } from "react";
@@ -34,6 +37,8 @@ export default function Orders() {
     });
 
   const [openModal, setOpenModal] = useState(false);
+  const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<Order | null>(null);
+  const [openDetailModal, setOpenDetailModal] = useState(false);
   const [onSelect, setOnSelect] = useState<{ id: string; status: string }>({
     id: "",
     status: "",
@@ -203,6 +208,14 @@ export default function Orders() {
                 })}
               </div>
 
+              {/* Automatic Push Notification Alert */}
+              <div className="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-start gap-2.5">
+                <IconBell className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-cyan-200 leading-relaxed">
+                  <strong>Push Notification Otomatis:</strong> Perubahan status pengiriman ini akan otomatis dikirimkan secara instan ke perangkat Web dan Mobile (iPhone & Android) pelanggan.
+                </p>
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-3">
                 <button
                   type="button"
@@ -297,9 +310,18 @@ export default function Orders() {
                     </td>
 
                     <td className="py-4 px-4">
-                      <p className="font-mono text-xs font-semibold text-neutral-100 group-hover:text-cyan-300 transition-colors">
-                        {order._id}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedOrderForDetail(order);
+                          setOpenDetailModal(true);
+                        }}
+                        className="font-mono text-xs font-semibold text-neutral-100 hover:text-cyan-300 text-left transition-colors flex items-center gap-1.5 group/btn"
+                        title="Click to view full order details"
+                      >
+                        <span>{order._id}</span>
+                        <IconEye className="w-3.5 h-3.5 opacity-0 group-hover/btn:opacity-100 text-cyan-400 transition-opacity" />
+                      </button>
                       <p className="text-[11px] text-neutral-400 mt-0.5">
                         {formatDate(order.updatedAt || order.createdAt)}
                       </p>
@@ -327,28 +349,44 @@ export default function Orders() {
                     </td>
 
                     <td className="py-4 px-4 text-right">
-                      {order.status_payment === "completed" &&
-                      order.status_delivery !== "delivered" &&
-                      order.status_delivery !== "cancelled" ? (
+                      <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
                           onClick={() => {
-                            setOnSelect({
-                              id: order._id,
-                              status: order.status_delivery,
-                            });
-                            setOpenModal(true);
+                            setSelectedOrderForDetail(order);
+                            setOpenDetailModal(true);
                           }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition-all shadow-sm"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-neutral-200 border border-neutral-700/60 text-xs font-medium transition-all shadow-sm"
+                          title="View complete order and invoice details"
                         >
-                          <IconTruckDelivery className="w-3.5 h-3.5" />
-                          Update
+                          <IconEye className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Detail</span>
                         </button>
-                      ) : (
-                        <span className="text-[11px] text-neutral-400 italic">
-                          Locked
-                        </span>
-                      )}
+
+                        {order.status_payment === "completed" &&
+                        order.status_delivery !== "delivered" &&
+                        order.status_delivery !== "cancelled" ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setOnSelect({
+                                id: order._id,
+                                status: order.status_delivery,
+                              });
+                              setOpenModal(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition-all shadow-sm"
+                            title="Update shipping delivery status"
+                          >
+                            <IconTruckDelivery className="w-3.5 h-3.5" />
+                            <span>Update</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-neutral-500 px-1 italic">
+                            Locked
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -373,6 +411,23 @@ export default function Orders() {
           </div>
         </div>
       )}
+
+      {/* Order Detail Modal */}
+      <OrderDetailModal
+        order={selectedOrderForDetail}
+        isOpen={openDetailModal}
+        onClose={() => {
+          setOpenDetailModal(false);
+          setSelectedOrderForDetail(null);
+        }}
+        onOpenUpdateDelivery={(ord) => {
+          setOnSelect({
+            id: ord._id,
+            status: ord.status_delivery,
+          });
+          setOpenModal(true);
+        }}
+      />
 
       <ToastContainer theme="dark" />
     </div>

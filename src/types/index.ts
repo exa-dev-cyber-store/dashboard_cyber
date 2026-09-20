@@ -44,6 +44,8 @@ export interface ResponsFetchProducts {
 
 export interface LoginResponse {
     token: string;
+    accessToken?: string;
+    refreshToken?: string;
     name: string;
     role: string;
 }
@@ -67,14 +69,33 @@ export interface DashboardResponse {
     dataChart: Chart[];
 }
 
+export interface OrderItem {
+    _id: {
+        _id?: string;
+        name?: string;
+        price?: number;
+        image_thumbnail?: string;
+        category?: any;
+    } | string;
+    name: string;
+    price: number;
+    quantity: number;
+}
+
 export interface Order {
     _id: string;
-    user: string;
+    user?: {
+        _id?: string;
+        name?: string;
+        email?: string;
+        avatar?: string;
+    } | string;
     tax: number;
     createdAt: Date;
     updatedAt: Date;
     status_delivery: string;
     payment_method: string;
+    payment_details?: any;
     shipping: number;
     delivery_address: {
         provinsi: string;
@@ -87,6 +108,8 @@ export interface Order {
     discount: number;
     total: number;
     status_payment: string;
+    order_items?: OrderItem[];
+    url_redirect?: string;
 }
 
 export interface Search extends React.FormEvent<HTMLFormElement> {

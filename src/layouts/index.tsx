@@ -10,6 +10,7 @@ import {
     IconUser,
     IconUsers,
     IconTicket,
+    IconBell,
 } from "@tabler/icons-react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -18,7 +19,7 @@ import { useCookies } from "react-cookie";
 import { NameProvider } from "@/context";
 
 export default function Layout() {
-    const [cookies, , removeCookie] = useCookies(['token', 'admin_name']);
+    const [cookies, , removeCookie] = useCookies(['token', 'refreshToken', 'admin_name']);
     const nameContext = useContext(NameProvider);
     const navigate = useNavigate();
     const location = useLocation();
@@ -26,9 +27,26 @@ export default function Layout() {
 
     const adminName = nameContext?.name || cookies.admin_name || "Admin Cyber";
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        const refreshToken = cookies.refreshToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('refreshToken') : null);
+        if (refreshToken) {
+            try {
+                const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
+                await fetch(`${BASE_URL}/auth/logout`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refreshToken }),
+                });
+            } catch {}
+        }
         removeCookie('token', { path: '/' });
+        removeCookie('refreshToken', { path: '/' });
         removeCookie('admin_name', { path: '/' });
+        if (typeof localStorage !== 'undefined') {
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('admin_name');
+        }
         if (nameContext?.setName) {
             nameContext.setName('');
         }
@@ -71,6 +89,13 @@ export default function Layout() {
                 <IconTicket className="flex-shrink-0 w-5 h-5 text-amber-400" />
             )
         },
+        {
+            label: "Notifications",
+            href: "/notifications",
+            icon: (
+                <IconBell className="flex-shrink-0 w-5 h-5 text-indigo-400" />
+            )
+        },
     ];
 
     const getPageTitle = () => {
@@ -81,11 +106,12 @@ export default function Layout() {
         if (location.pathname.startsWith("/orders")) return "Order Management";
         if (location.pathname.startsWith("/users")) return "User Management";
         if (location.pathname.startsWith("/vouchers")) return "Voucher & Promo Generator";
+        if (location.pathname.startsWith("/notifications")) return "Push Notifications & Broadcast Manager";
         return "Dashboard";
     };
 
     return (
-        <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#090b10] text-neutral-100 overflow-x-hidden">
+        <div className="min-h-screen w-full flex flex-col md:flex-row bg-[#090b10] text-neutral-100">
             <Sidebar open={open} setOpen={setOpen}>
                 <SidebarBody className="justify-between gap-10">
                     <div className="flex flex-col flex-1 overflow-x-hidden overflow-y-auto">
@@ -153,7 +179,7 @@ export default function Layout() {
             </Sidebar>
 
             {/* Main content viewport */}
-            <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+            <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden">
                 {/* Modern Top Header */}
                 <header className="h-16 px-6 lg:px-10 border-b border-neutral-800/70 bg-[#0c0e15]/80 backdrop-blur-xl flex items-center justify-between sticky top-0 z-30">
                     <div className="flex items-center gap-3">

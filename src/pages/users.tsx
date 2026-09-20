@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { getUsers, updateUserRole, deleteUser } from "@/app/api/users";
+import { getUsers, updateUserRole, deleteUser, createUser } from "@/app/api/users";
 import { DashboardUser, UserListResponse } from "@/types";
 import formatDate from "@/libs/formatDate";
 import {
@@ -14,6 +14,12 @@ import {
   IconX,
   IconCheck,
   IconAlertTriangle,
+  IconUserPlus,
+  IconLock,
+  IconMail,
+  IconUser,
+  IconEye,
+  IconEyeOff,
 } from "@tabler/icons-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -43,6 +49,22 @@ export default function Users() {
   const [userToDelete, setUserToDelete] = useState<DashboardUser | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Create User Modal State
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user" as "admin" | "user",
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [formErrors, setFormErrors] = useState<{
+    name?: string;
+    email?: string;
+    password?: string;
+  }>({});
+
   const [cookies] = useCookies(["token"]);
   const token = cookies.token || localStorage.getItem("token") || "";
 
@@ -60,7 +82,7 @@ export default function Users() {
         });
       }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Gagal memuat daftar pengguna", {
+      toast.error(err?.response?.data?.message || "Failed to load user directory", {
         theme: "dark",
       });
     } finally {
@@ -71,6 +93,63 @@ export default function Users() {
   useEffect(() => {
     fetchUsersData();
   }, [fetchUsersData]);
+
+  const handleOpenCreateModal = () => {
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+      role: "user",
+    });
+    setFormErrors({});
+    setShowPassword(false);
+    setCreateModalOpen(true);
+  };
+
+  const validateForm = () => {
+    const errors: { name?: string; email?: string; password?: string } = {};
+    if (!formData.name.trim() || formData.name.trim().length < 2) {
+      errors.name = "Full name must be at least 2 characters.";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim() || !emailRegex.test(formData.email.trim())) {
+      errors.email = "Please enter a valid email address.";
+    }
+    if (!formData.password || formData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters.";
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsCreating(true);
+    try {
+      await createUser(
+        {
+          name: formData.name.trim(),
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password,
+          role: formData.role,
+        },
+        token
+      );
+      toast.success(`User ${formData.name} created successfully!`, {
+        theme: "dark",
+      });
+      setCreateModalOpen(false);
+      fetchUsersData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to create user", {
+        theme: "dark",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const handleOpenRoleModal = (user: DashboardUser) => {
     setSelectedUser(user);
@@ -83,13 +162,13 @@ export default function Users() {
     setIsUpdating(true);
     try {
       await updateUserRole(selectedUser._id, newRole, token);
-      toast.success(`Role pengguna ${selectedUser.name} berhasil diubah menjadi ${newRole}`, {
+      toast.success(`User role for ${selectedUser.name} updated to ${newRole}`, {
         theme: "dark",
       });
       setRoleModalOpen(false);
       fetchUsersData();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Gagal mengubah role pengguna", {
+      toast.error(err?.response?.data?.message || "Failed to update user role", {
         theme: "dark",
       });
     } finally {
@@ -107,13 +186,13 @@ export default function Users() {
     setIsDeleting(true);
     try {
       await deleteUser(userToDelete._id, token);
-      toast.success(`Pengguna ${userToDelete.name} berhasil dihapus`, {
+      toast.success(`User ${userToDelete.name} deleted successfully`, {
         theme: "dark",
       });
       setDeleteModalOpen(false);
       fetchUsersData();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Gagal menghapus pengguna", {
+      toast.error(err?.response?.data?.message || "Failed to delete user", {
         theme: "dark",
       });
     } finally {
@@ -133,16 +212,25 @@ export default function Users() {
             User Management
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Kelola akun pengguna terdaftar, atur hak akses role, dan kelola izin administrator.
+            Manage registered accounts, assign administrative roles, and add new users.
           </p>
         </div>
-        <button
-          onClick={() => fetchUsersData()}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/70 text-sm font-medium transition-all"
-        >
-          <IconRotate className={`w-4 h-4 ${loading ? "animate-spin text-cyan-400" : ""}`} />
-          Refresh Data
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => fetchUsersData()}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-slate-700/70 text-sm font-medium transition-all"
+          >
+            <IconRotate className={`w-4 h-4 ${loading ? "animate-spin text-cyan-400" : ""}`} />
+            Refresh
+          </button>
+          <button
+            onClick={handleOpenCreateModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-medium shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+          >
+            <IconUserPlus className="w-4 h-4" />
+            Add User
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -207,7 +295,7 @@ export default function Users() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama atau email user..."
+            placeholder="Search by name or email..."
             className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-800/80 border border-slate-700/70 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 transition-colors"
           />
         </div>
@@ -222,7 +310,7 @@ export default function Users() {
             onChange={(e) => setRoleFilter(e.target.value)}
             className="px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/70 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
           >
-            <option value="all">Semua Role</option>
+            <option value="all">All Roles</option>
             <option value="admin">Administrator</option>
             <option value="user">Customer (User)</option>
           </select>
@@ -238,8 +326,8 @@ export default function Users() {
                 <th className="px-6 py-4">User</th>
                 <th className="px-6 py-4">Email</th>
                 <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4">Terdaftar Sejak</th>
-                <th className="px-6 py-4 text-center">Aksi</th>
+                <th className="px-6 py-4">Registered On</th>
+                <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -248,14 +336,14 @@ export default function Users() {
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                     <div className="flex items-center justify-center gap-2">
                       <IconRotate className="w-5 h-5 animate-spin text-cyan-400" />
-                      <span>Memuat data pengguna...</span>
+                      <span>Loading users...</span>
                     </div>
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                    Tidak ada pengguna yang cocok dengan kriteria pencarian.
+                    No users found matching your search criteria.
                   </td>
                 </tr>
               ) : (
@@ -311,14 +399,14 @@ export default function Users() {
                           <button
                             onClick={() => handleOpenRoleModal(user)}
                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 transition-colors border border-slate-700"
-                            title="Ubah Role"
+                            title="Edit Role"
                           >
                             <IconEdit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleOpenDeleteModal(user)}
                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors border border-slate-700"
-                            title="Hapus Pengguna"
+                            title="Delete User"
                           >
                             <IconTrash className="w-4 h-4" />
                           </button>
@@ -333,18 +421,195 @@ export default function Users() {
         </div>
       </div>
 
+      {/* Add User Modal */}
+      {createModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-[#0e111a] border border-slate-800 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                  <IconUserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white leading-tight">Add New User</h3>
+                  <p className="text-xs text-slate-400">Create an account with role permissions</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCreateModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <IconX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              {/* Full Name */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Full Name <span className="text-rose-400">*</span>
+                </label>
+                <div className="relative">
+                  <IconUser className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      if (formErrors.name) setFormErrors({ ...formErrors, name: undefined });
+                    }}
+                    placeholder="e.g. Jane Doe"
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/80 border text-sm text-white placeholder-slate-400 focus:outline-none transition-colors ${
+                      formErrors.name
+                        ? "border-rose-500/80 focus:border-rose-500"
+                        : "border-slate-700/70 focus:border-cyan-500"
+                    }`}
+                  />
+                </div>
+                {formErrors.name && (
+                  <p className="text-xs text-rose-400 mt-1">{formErrors.name}</p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Email Address <span className="text-rose-400">*</span>
+                </label>
+                <div className="relative">
+                  <IconMail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value });
+                      if (formErrors.email) setFormErrors({ ...formErrors, email: undefined });
+                    }}
+                    placeholder="e.g. user@cybershop.com"
+                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800/80 border text-sm text-white placeholder-slate-400 focus:outline-none transition-colors ${
+                      formErrors.email
+                        ? "border-rose-500/80 focus:border-rose-500"
+                        : "border-slate-700/70 focus:border-cyan-500"
+                    }`}
+                  />
+                </div>
+                {formErrors.email && (
+                  <p className="text-xs text-rose-400 mt-1">{formErrors.email}</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Password <span className="text-rose-400">*</span>
+                </label>
+                <div className="relative">
+                  <IconLock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => {
+                      setFormData({ ...formData, password: e.target.value });
+                      if (formErrors.password) setFormErrors({ ...formErrors, password: undefined });
+                    }}
+                    placeholder="Minimum 6 characters"
+                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-800/80 border text-sm text-white placeholder-slate-400 focus:outline-none transition-colors ${
+                      formErrors.password
+                        ? "border-rose-500/80 focus:border-rose-500"
+                        : "border-slate-700/70 focus:border-cyan-500"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  >
+                    {showPassword ? (
+                      <IconEyeOff className="w-4 h-4" />
+                    ) : (
+                      <IconEye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+                {formErrors.password && (
+                  <p className="text-xs text-rose-400 mt-1">{formErrors.password}</p>
+                )}
+              </div>
+
+              {/* Role Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Assign Role:
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: "user" })}
+                    className={`p-3 rounded-xl border text-left flex flex-col gap-1 transition-all ${
+                      formData.role === "user"
+                        ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-300 ring-1 ring-emerald-500/30"
+                        : "bg-slate-800/40 border-slate-700/70 text-slate-400 hover:border-slate-600"
+                    }`}
+                  >
+                    <span className="font-bold text-xs flex items-center justify-between">
+                      Customer (User)
+                      {formData.role === "user" && <IconCheck className="w-4 h-4 text-emerald-400" />}
+                    </span>
+                    <span className="text-[11px] text-slate-400">Storefront customer account</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: "admin" })}
+                    className={`p-3 rounded-xl border text-left flex flex-col gap-1 transition-all ${
+                      formData.role === "admin"
+                        ? "bg-purple-500/10 border-purple-500/50 text-purple-300 ring-1 ring-purple-500/30"
+                        : "bg-slate-800/40 border-slate-700/70 text-slate-400 hover:border-slate-600"
+                    }`}
+                  >
+                    <span className="font-bold text-xs flex items-center justify-between">
+                      Administrator
+                      {formData.role === "admin" && <IconCheck className="w-4 h-4 text-purple-400" />}
+                    </span>
+                    <span className="text-[11px] text-slate-400">Full dashboard privileges</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreating}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-semibold shadow-lg shadow-cyan-500/20 disabled:opacity-50 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  {isCreating && <IconRotate className="w-3.5 h-3.5 animate-spin" />}
+                  {isCreating ? "Creating User..." : "Create User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Role Edit Modal */}
       {roleModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-[#0e111a] border border-slate-800 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <IconShieldLock className="w-5 h-5 text-cyan-400" />
-                Ubah Role Pengguna
+                Edit User Role
               </h3>
               <button
                 onClick={() => setRoleModalOpen(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
               >
                 <IconX className="w-5 h-5" />
               </button>
@@ -357,7 +622,7 @@ export default function Users() {
 
             <div className="space-y-3">
               <label className="text-xs font-semibold text-slate-300 block">
-                Pilih Role Baru:
+                Select New Role:
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -373,7 +638,7 @@ export default function Users() {
                     Customer (User)
                     {newRole === "user" && <IconCheck className="w-4 h-4 text-emerald-400" />}
                   </span>
-                  <span className="text-[11px] text-slate-400">Akses belanja publik</span>
+                  <span className="text-[11px] text-slate-400">Storefront customer access</span>
                 </button>
 
                 <button
@@ -389,7 +654,7 @@ export default function Users() {
                     Administrator
                     {newRole === "admin" && <IconCheck className="w-4 h-4 text-purple-400" />}
                   </span>
-                  <span className="text-[11px] text-slate-400">Akses penuh dashboard</span>
+                  <span className="text-[11px] text-slate-400">Full dashboard privileges</span>
                 </button>
               </div>
             </div>
@@ -400,7 +665,7 @@ export default function Users() {
                 onClick={() => setRoleModalOpen(false)}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
@@ -408,7 +673,7 @@ export default function Users() {
                 disabled={isUpdating}
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-semibold shadow-lg shadow-cyan-500/20 disabled:opacity-50"
               >
-                {isUpdating ? "Menyimpan..." : "Simpan Perubahan"}
+                {isUpdating ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>
@@ -417,20 +682,20 @@ export default function Users() {
 
       {/* Delete Confirmation Modal */}
       {deleteModalOpen && userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-800 p-6 shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl bg-[#0e111a] border border-slate-800 p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center gap-3 text-red-400">
               <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
                 <IconAlertTriangle className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Hapus Pengguna?</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Tindakan ini tidak dapat dibatalkan</p>
+                <h3 className="text-base font-bold text-white">Delete User?</h3>
+                <p className="text-xs text-slate-400 mt-0.5">This action cannot be undone</p>
               </div>
             </div>
 
             <p className="text-sm text-slate-300">
-              Apakah Anda yakin ingin menghapus akun{" "}
+              Are you sure you want to permanently delete the account for{" "}
               <span className="font-semibold text-white">{userToDelete.name}</span> ({userToDelete.email})?
             </p>
 
@@ -440,7 +705,7 @@ export default function Users() {
                 onClick={() => setDeleteModalOpen(false)}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
@@ -448,7 +713,7 @@ export default function Users() {
                 disabled={isDeleting}
                 className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-semibold shadow-lg shadow-red-600/20 disabled:opacity-50"
               >
-                {isDeleting ? "Menghapus..." : "Ya, Hapus Pengguna"}
+                {isDeleting ? "Deleting..." : "Yes, Delete User"}
               </button>
             </div>
           </div>

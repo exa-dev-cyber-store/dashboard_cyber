@@ -8,6 +8,7 @@ import AddProducts from "@/pages/Products/addProducts";
 import Orders from "@/pages/orders";
 import Users from "@/pages/users";
 import Vouchers from "@/pages/vouchers";
+import Notifications from "@/pages/notifications";
 import WrapIsAuthenticated from "@/hoc";
 
 const router = createBrowserRouter([
@@ -42,6 +43,10 @@ const router = createBrowserRouter([
             {
                 path: "vouchers",
                 element: <WrapIsAuthenticated Page={Vouchers} />,
+            },
+            {
+                path: "notifications",
+                element: <WrapIsAuthenticated Page={Notifications} />,
             },
         ],
     },

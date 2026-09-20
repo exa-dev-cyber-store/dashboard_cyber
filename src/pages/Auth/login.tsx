@@ -37,12 +37,18 @@ export default function Login() {
     },
   });
 
-  const [cookies, , removeCookie] = useCookies(["token", "admin_name"]);
+  const [cookies, , removeCookie] = useCookies(["token", "refreshToken", "admin_name"]);
 
   useEffect(() => {
-    if (cookies.token) {
+    if (cookies.token || cookies.refreshToken) {
       removeCookie("token", { path: "/" });
+      removeCookie("refreshToken", { path: "/" });
       removeCookie("admin_name", { path: "/" });
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("admin_name");
+      }
     }
   }, []);
 

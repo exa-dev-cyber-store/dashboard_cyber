@@ -7,8 +7,13 @@ interface WrapIsAuthenticatedProps {
 }
 
 const WrapIsAuthenticated: React.FC<WrapIsAuthenticatedProps> = ({ Page }) => {
-    const [cookies] = useCookies(['token']);
-    if (!cookies.token) {
+    const [cookies] = useCookies(['token', 'refreshToken']);
+    const hasToken =
+        Boolean(cookies.token || cookies.refreshToken) ||
+        (typeof localStorage !== 'undefined' &&
+            Boolean(localStorage.getItem('token') || localStorage.getItem('refreshToken')));
+
+    if (!hasToken) {
         return <Navigate to="/login" replace />;
     } else {
         return <Page />;

@@ -36,6 +36,24 @@ export const updateUserRole = async (
     .then((res) => res.data);
 };
 
+export const createUser = async (
+  data: {
+    name: string;
+    email: string;
+    password: string;
+    role?: 'admin' | 'user';
+  },
+  token: string
+) => {
+  return await axiosInstanceData
+    .post('/api/users', data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((res) => res.data);
+};
+
 export const deleteUser = async (id: string, token: string) => {
   return await axiosInstanceData
     .delete(`/api/users/${id}`, {
@@ -45,3 +63,4 @@ export const deleteUser = async (id: string, token: string) => {
     })
     .then((res) => res.data);
 };
+
