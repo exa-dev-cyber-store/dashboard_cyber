@@ -15,11 +15,15 @@ import {
 } from "@tabler/icons-react";
 import { toast } from "react-toastify";
 import { axiosInstanceData } from "@/libs/axios";
+import { formatRupiah } from "@/libs/formatRupiah";
 
 interface Voucher {
   _id: string;
   code: string;
-  discount: number;
+  title?: string;
+  discountType?: "percentage" | "fixed";
+  discountValue?: number;
+  discount?: number;
   isActive: boolean;
   name?: string;
   expiresAt?: string;
@@ -123,14 +127,32 @@ export default function NotificationsPage() {
     }
   };
 
+  // Helper to format voucher discount label (percentage or Rupiah)
+  const getVoucherDiscountLabel = (v: Voucher) => {
+    const isFixed = v.discountType === "fixed";
+    const value = v.discountValue ?? v.discount ?? 0;
+    return isFixed ? formatRupiah(value) : `${value}%`;
+  };
+
   // Handle Voucher Selection
   const handleVoucherSelect = (code: string) => {
     setSelectedVoucherCode(code);
     const found = vouchers.find((v) => v.code === code);
     if (found) {
-      setDiscountAmount(found.discount);
-      setTitle(`🎉 Voucher Baru: Potongan ${found.discount}% [${found.code}]`);
-      setBody(`Gunakan kode promo ${found.code} untuk mendapatkan diskon ${found.discount}% belanja produk Apple favoritmu.`);
+      const discountVal = found.discountValue ?? found.discount ?? 0;
+      setDiscountAmount(discountVal);
+
+      const discountLabel = getVoucherDiscountLabel(found);
+      const isFixed = found.discountType === "fixed";
+
+      if (isFixed) {
+        setTitle(`🎉 Voucher Baru: Potongan ${discountLabel} [${found.code}]`);
+        setBody(`Gunakan kode promo ${found.code} untuk mendapatkan potongan harga ${discountLabel} belanja produk Apple favoritmu.`);
+      } else {
+        setTitle(`🎉 Voucher Baru: Diskon ${discountLabel} [${found.code}]`);
+        setBody(`Gunakan kode promo ${found.code} untuk mendapatkan diskon ${discountLabel} belanja produk Apple favoritmu.`);
+      }
+
       setType("voucher");
       setDeepLink("/shop");
     }
@@ -298,11 +320,14 @@ export default function NotificationsPage() {
                   className="w-full bg-[#111420] border border-amber-500/30 text-white rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-400"
                 >
                   <option value="">-- Pilih Voucher dari Database --</option>
-                  {vouchers.map((v) => (
-                    <option key={v._id} value={v.code}>
-                      Kode: {v.code} (Diskon {v.discount}%) {v.isActive ? "🟢 Aktif" : "⚪ Nonaktif"}
-                    </option>
-                  ))}
+                  {vouchers.map((v) => {
+                    const discountLabel = getVoucherDiscountLabel(v);
+                    return (
+                      <option key={v._id} value={v.code}>
+                        Kode: {v.code} ({discountLabel}) - {v.title || v.name || v.code} {v.isActive ? "🟢 Aktif" : "⚪ Nonaktif"}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             )}
