@@ -54,7 +54,7 @@ export default function NotificationsPage() {
   const [body, setBody] = useState("Gunakan kode CYBER25 saat checkout untuk potongan harga belanja produk Apple idamanmu.");
   const [type, setType] = useState<"voucher" | "promo" | "delivery" | "announcement">("voucher");
   const [target, setTarget] = useState<"all" | "user">("all");
-  const [targetUserId, setTargetUserId] = useState("");
+  const [targetUserEmail, setTargetUserEmail] = useState("");
   const [selectedVoucherCode, setSelectedVoucherCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState<number | undefined>(25);
   const [deepLink, setDeepLink] = useState("/shop");
@@ -167,6 +167,11 @@ export default function NotificationsPage() {
       return;
     }
 
+    if (target === "user" && !targetUserEmail.trim()) {
+      toast.error("Email pengguna tujuan wajib diisi", { theme: "dark" });
+      return;
+    }
+
     setIsSending(true);
     try {
       await axiosInstanceData.post("/api/notifications/broadcast", {
@@ -174,7 +179,8 @@ export default function NotificationsPage() {
         body,
         type,
         target,
-        userId: target === "user" ? targetUserId : undefined,
+        email: target === "user" ? targetUserEmail.trim() : undefined,
+        userId: target === "user" ? targetUserEmail.trim() : undefined,
         voucherCode: selectedVoucherCode || undefined,
         discount: discountAmount,
         link: deepLink,
@@ -366,14 +372,19 @@ export default function NotificationsPage() {
                   </button>
                 </div>
                 {target === "user" && (
-                  <input
-                    type="text"
-                    placeholder="Masukkan ID User (MongoDB ObjectId)"
-                    value={targetUserId}
-                    onChange={(e) => setTargetUserId(e.target.value)}
-                    className="w-full mt-2 bg-[#111420] border border-neutral-700 text-white rounded-xl px-4 py-2.5 text-xs outline-none focus:border-cyan-400"
-                    required
-                  />
+                  <div className="mt-2 space-y-1">
+                    <input
+                      type="email"
+                      placeholder="Masukkan email pengguna (contoh: user@gmail.com)"
+                      value={targetUserEmail}
+                      onChange={(e) => setTargetUserEmail(e.target.value)}
+                      className="w-full bg-[#111420] border border-neutral-700 text-white rounded-xl px-4 py-2.5 text-xs outline-none focus:border-cyan-400 placeholder:text-neutral-500"
+                      required
+                    />
+                    <p className="text-[11px] text-neutral-400 pl-1">
+                      💡 Notifikasi akan langsung dikirim ke akun dan seluruh perangkat aktif milik email ini.
+                    </p>
+                  </div>
                 )}
               </div>
 
