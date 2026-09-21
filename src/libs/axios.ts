@@ -8,40 +8,25 @@ export function getStoredToken(): string {
         if (match && match[1]) {
             return decodeURIComponent(match[1]);
         }
-        const local = localStorage.getItem("token");
-        if (local) return local;
     }
     return "";
 }
+
 
 export function getStoredRefreshToken(): string {
-    if (typeof document !== "undefined") {
-        const match = document.cookie.match(/(?:^|;\s*)refreshToken=([^;]*)/);
-        if (match && match[1]) {
-            return decodeURIComponent(match[1]);
-        }
-        const local = localStorage.getItem("refreshToken");
-        if (local) return local;
-    }
     return "";
 }
 
-export function setStoredTokens(accessToken: string, refreshToken?: string): void {
+export function setStoredTokens(accessToken: string): void {
     if (typeof document !== "undefined") {
         const isSecure = window.location.protocol === "https:";
         const expiresAccess = new Date(Date.now() + 15 * 60 * 1000).toUTCString();
         document.cookie = `token=${encodeURIComponent(accessToken)}; path=/; SameSite=Lax; expires=${expiresAccess}${isSecure ? "; Secure" : ""}`;
-
-        if (refreshToken) {
-            const expiresRefresh = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
-            document.cookie = `refreshToken=${encodeURIComponent(refreshToken)}; path=/; SameSite=Lax; expires=${expiresRefresh}${isSecure ? "; Secure" : ""}`;
-        }
     }
+    // Purge any legacy items from localStorage
     if (typeof localStorage !== "undefined") {
-        localStorage.setItem("token", accessToken);
-        if (refreshToken) {
-            localStorage.setItem("refreshToken", refreshToken);
-        }
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
     }
 }
 
@@ -126,15 +111,6 @@ const setupResponseInterceptor = (instance: AxiosInstance) => {
                 return Promise.reject(error);
             }
 
-            const refreshToken = getStoredRefreshToken();
-            if (!refreshToken) {
-                clearStoredTokens();
-                if (typeof window !== "undefined" && window.location.pathname !== "/login") {
-                    window.location.href = "/login";
-                }
-                return Promise.reject(error);
-            }
-
             if (isRefreshing) {
                 return new Promise<string>((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -150,22 +126,19 @@ const setupResponseInterceptor = (instance: AxiosInstance) => {
             isRefreshing = true;
 
             try {
-                // Call refresh endpoint with raw axios
-                const res = await axios.post(`${BASE_URL}/auth/refresh`, {
-                    refreshToken,
-                }, {
+                // Call refresh endpoint with raw axios; browser automatically attaches httpOnly refreshToken cookie
+                const res = await axios.post(`${BASE_URL}/auth/refresh`, {}, {
                     withCredentials: true,
                 });
 
                 const payload = res.data?.data || res.data;
                 const newAccessToken = payload?.accessToken || payload?.token;
-                const newRefreshToken = payload?.refreshToken || refreshToken;
 
                 if (!newAccessToken) {
                     throw new Error("Missing new access token in refresh response");
                 }
 
-                setStoredTokens(newAccessToken, newRefreshToken);
+                setStoredTokens(newAccessToken);
                 processQueue(null, newAccessToken);
 
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;

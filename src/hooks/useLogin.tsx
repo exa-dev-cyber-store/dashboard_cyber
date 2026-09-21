@@ -7,7 +7,7 @@ import { useCookies } from "react-cookie";
 import { useNavigate } from "react-router-dom";
 
 export default function useLogin({ onError }: { onError: () => void }) {
-    const [, setCookie] = useCookies(['token', 'refreshToken', 'admin_name']);
+    const [, setCookie] = useCookies(['token', 'admin_name']);
     const nameContext = useContext(NameProvider);
     const { setName } = nameContext!;
     const navigate = useNavigate();
@@ -20,20 +20,16 @@ export default function useLogin({ onError }: { onError: () => void }) {
             }
             const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
             const accessToken = data.accessToken || data.token;
-            const refreshToken = data.refreshToken;
 
+            // Store access token and admin name in cookies (refreshToken is handled as httpOnly cookie by backend)
             setCookie('token', accessToken, { path: '/', sameSite: 'lax', secure: isSecure });
-            if (refreshToken) {
-                setCookie('refreshToken', refreshToken, { path: '/', sameSite: 'lax', secure: isSecure });
-            }
             setCookie('admin_name', data.name, { path: '/', sameSite: 'lax', secure: isSecure });
 
+            // Ensure no legacy tokens remain in localStorage
             if (typeof localStorage !== 'undefined') {
-                localStorage.setItem('token', accessToken);
-                if (refreshToken) {
-                    localStorage.setItem('refreshToken', refreshToken);
-                }
-                localStorage.setItem('admin_name', data.name);
+                localStorage.removeItem('token');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('admin_name');
             }
             setName(data.name);
             navigate('/');

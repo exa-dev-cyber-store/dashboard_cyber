@@ -66,7 +66,7 @@ export default function Users() {
   }>({});
 
   const [cookies] = useCookies(["token"]);
-  const token = cookies.token || localStorage.getItem("token") || "";
+  const token = cookies.token || "";
 
   const fetchUsersData = useCallback(async () => {
     setLoading(true);

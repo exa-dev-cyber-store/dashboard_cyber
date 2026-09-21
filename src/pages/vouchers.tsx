@@ -67,7 +67,7 @@ export default function Vouchers() {
   });
 
   const [cookies] = useCookies(["token"]);
-  const token = cookies.token || localStorage.getItem("token") || "";
+  const token = cookies.token || "";
 
   const fetchVouchersData = useCallback(async () => {
     setLoading(true);

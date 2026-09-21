@@ -28,17 +28,14 @@ export default function Layout() {
     const adminName = nameContext?.name || cookies.admin_name || "Admin Cyber";
 
     const handleLogout = async () => {
-        const refreshToken = cookies.refreshToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('refreshToken') : null);
-        if (refreshToken) {
-            try {
-                const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
-                await fetch(`${BASE_URL}/auth/logout`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ refreshToken }),
-                });
-            } catch {}
-        }
+        try {
+            const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
+            await fetch(`${BASE_URL}/auth/logout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+            });
+        } catch {}
         removeCookie('token', { path: '/' });
         removeCookie('refreshToken', { path: '/' });
         removeCookie('admin_name', { path: '/' });
