@@ -50,8 +50,8 @@ export default function NotificationsPage() {
   const [previewPlatform, setPreviewPlatform] = useState<"ios" | "android" | "web">("ios");
 
   // Form State
-  const [title, setTitle] = useState("🎉 Voucher Baru Tersedia: Diskon 25%!");
-  const [body, setBody] = useState("Gunakan kode CYBER25 saat checkout untuk potongan harga belanja produk Apple idamanmu.");
+  const [title, setTitle] = useState("🎉 New Voucher Available: 25% Off!");
+  const [body, setBody] = useState("Use code CYBER25 at checkout to enjoy discounts on your favorite Apple products.");
   const [type, setType] = useState<"voucher" | "promo" | "delivery" | "announcement">("voucher");
   const [target, setTarget] = useState<"all" | "user">("all");
   const [targetUserEmail, setTargetUserEmail] = useState("");
@@ -107,23 +107,23 @@ export default function NotificationsPage() {
   const applyPreset = (presetType: "voucher" | "flash" | "delivery" | "general") => {
     if (presetType === "voucher") {
       setType("voucher");
-      setTitle("🎟️ Voucher Baru Spesial Menantimu!");
-      setBody("Klaim voucher diskon sekarang juga sebelum masa promo berakhir. Berlaku di semua kategori!");
+      setTitle("🎟️ New Special Voucher Waiting for You!");
+      setBody("Claim your discount voucher now before the promotion ends. Valid across all Apple categories!");
       setDeepLink("/shop");
     } else if (presetType === "flash") {
       setType("promo");
-      setTitle("⚡ Cyber Apple Flash Sale Dimulai!");
-      setBody("Dapatkan penawaran terbatas untuk iPhone, MacBook, dan iPad dengan cashback spesial hari ini saja!");
+      setTitle("⚡ Cyber Apple Flash Sale Has Started!");
+      setBody("Get limited-time deals on iPhone, MacBook, and iPad with special cashback today only!");
       setDeepLink("/shop");
     } else if (presetType === "delivery") {
       setType("delivery");
-      setTitle("🚚 Pesanan Anda Sedang Dikirim!");
-      setBody("Paket Anda telah diserahkan ke kurir dan sedang dalam perjalanan ke alamat tujuan Anda.");
+      setTitle("🚚 Your Order is Out for Delivery!");
+      setBody("Your package has been handed over to the courier and is on its way to your destination address.");
       setDeepLink("/account/order");
     } else {
       setType("announcement");
-      setTitle("📢 Pengumuman Toko Cyber Apple");
-      setBody("Nikmati pengalaman berbelanja produk Apple resmi terbaru dengan fitur Sign in with Apple!");
+      setTitle("📢 Cyber Apple Store Announcement");
+      setBody("Experience official Apple shopping with express delivery and faster checkout!");
       setDeepLink("/");
     }
   };
@@ -147,11 +147,11 @@ export default function NotificationsPage() {
       const isFixed = found.discountType === "fixed";
 
       if (isFixed) {
-        setTitle(`🎉 Voucher Baru: Potongan ${discountLabel} [${found.code}]`);
-        setBody(`Gunakan kode promo ${found.code} untuk mendapatkan potongan harga ${discountLabel} belanja produk Apple favoritmu.`);
+        setTitle(`🎉 New Voucher: ${discountLabel} Off [${found.code}]`);
+        setBody(`Use promo code ${found.code} to get ${discountLabel} off your favorite Apple devices.`);
       } else {
-        setTitle(`🎉 Voucher Baru: Diskon ${discountLabel} [${found.code}]`);
-        setBody(`Gunakan kode promo ${found.code} untuk mendapatkan diskon ${discountLabel} belanja produk Apple favoritmu.`);
+        setTitle(`🎉 New Voucher: ${discountLabel} Discount [${found.code}]`);
+        setBody(`Use promo code ${found.code} to get ${discountLabel} off your favorite Apple devices.`);
       }
 
       setType("voucher");
@@ -536,15 +536,15 @@ export default function NotificationsPage() {
                     </div>
 
                     <p className="text-xs font-bold text-white leading-tight">
-                      {title || "Judul Notifikasi"}
+                      {title || "Notification Title"}
                     </p>
                     <p className="text-[11px] text-white/80 leading-snug line-clamp-2">
-                      {body || "Isi pesan notifikasi akan tampil di sini..."}
+                      {body || "Notification message will appear here..."}
                     </p>
                   </div>
 
                   <p className="text-center text-[10px] text-neutral-500">
-                    Tampilan pada Apple iPhone (iOS Lock Screen & Banner)
+                    Preview on Apple iPhone (iOS Lock Screen & Banner)
                   </p>
                 </div>
               )}
@@ -561,14 +561,14 @@ export default function NotificationsPage() {
                       </div>
                     </div>
                     <p className="text-xs font-bold text-white">
-                      {title || "Judul Notifikasi"}
+                      {title || "Notification Title"}
                     </p>
                     <p className="text-[11px] text-neutral-300 leading-snug">
-                      {body || "Isi pesan notifikasi Android..."}
+                      {body || "Android notification message..."}
                     </p>
                   </div>
                   <p className="text-center text-[10px] text-neutral-500">
-                    Tampilan pada Android Notification Shade
+                    Preview on Android Notification Shade
                   </p>
                 </div>
               )}
@@ -586,14 +586,14 @@ export default function NotificationsPage() {
                       <span className="text-[10px] text-neutral-400">eka-dev.cloud</span>
                     </div>
                     <p className="text-xs font-semibold text-cyan-300">
-                      {title || "Judul Notifikasi"}
+                      {title || "Notification Title"}
                     </p>
                     <p className="text-[11px] text-neutral-300 leading-snug">
-                      {body || "Pesan push notification desktop / web browser..."}
+                      {body || "Desktop / Web browser push notification..."}
                     </p>
                   </div>
                   <p className="text-center text-[10px] text-neutral-500">
-                    Tampilan pada Web Browser (Chrome / Safari Web Push)
+                    Preview on Web Browser (Chrome / Safari Web Push)
                   </p>
                 </div>
               )}
